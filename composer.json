@@ -15,7 +15,6 @@
     "framework",
     "php8"
   ],
-  "version": "1.0.0",
   "homepage": "https://kariricode.org",
   "type": "library",
   "license": "MIT",
