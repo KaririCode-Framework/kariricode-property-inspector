@@ -123,7 +123,7 @@ $analisadorAtributos = new AttributeAnalyzer(Validate::class);
 $inspetorPropriedades = new PropertyInspector($analisadorAtributos);
 $manipulador = new ManipuladorAtributoPersonalizado();
 
-$usuario = new Usuario('João Silva', 'joao@exemplo.com', 25);
+$usuario = new Usuario('Walmir Silva', 'walmir@exemplo.com', 25);
 
 $resultados = $inspetorPropriedades->inspect($usuario, $manipulador);
 ```
