@@ -1,0 +1,52 @@
+{
+  "name": "kariricode/property-inspector",
+  "description": "A robust and flexible data sanitization component for PHP, part of the KaririCode Framework, utilizing configurable processors and native functions.",
+  "keywords": [
+    "kariri-code",
+    "property-inspector",
+    "attribute",
+    "reflection",
+    "validation",
+    "normalization",
+    "inspection",
+    "object-properties",
+    "dynamic-analysis",
+    "metadata",
+    "framework",
+    "php8"
+  ],
+  "version": "1.0.0",
+  "homepage": "https://kariricode.org",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Walmir Silva",
+      "email": "community@kariricode.org"
+    }
+  ],
+  "require": {
+    "php": "^8.3"
+  },
+  "autoload": {
+    "psr-4": {
+      "KaririCode\\PropertyInspector\\": "src"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "KaririCode\\PropertyInspector\\Tests\\": "tests"
+    }
+  },
+  "require-dev": {
+    "friendsofphp/php-cs-fixer": "^3.51",
+    "phpstan/phpstan": "^1.10",
+    "phpunit/phpunit": "^11.0",
+    "squizlabs/php_codesniffer": "^3.9",
+    "enlightn/security-checker": "^2.0"
+  },
+  "support": {
+    "issues": "https://github.com/KaririCode-Framework/kariricode-property-inspector/issues",
+    "source": "https://github.com/KaririCode-Framework/kariricode-property-inspector"
+  }
+}
