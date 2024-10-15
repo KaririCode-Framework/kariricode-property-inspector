@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace KaririCode\PropertyInspector;
+namespace KaririCode\PropertyInspector\Utility;
 
 use KaririCode\PropertyInspector\Contract\AttributeAnalyzer;
 use KaririCode\PropertyInspector\Contract\PropertyAttributeHandler;
@@ -23,7 +23,7 @@ final class PropertyInspector implements PropertyInspectorContract
 
             foreach ($analysisResults as $propertyName => $propertyData) {
                 foreach ($propertyData['attributes'] as $attribute) {
-                    $result = $handler->handleAttribute($object, $propertyName, $attribute, $propertyData['value']);
+                    $result = $handler->handleAttribute($propertyName, $attribute, $propertyData['value']);
                     if (null !== $result) {
                         $handledResults[$propertyName][] = $result;
                     }

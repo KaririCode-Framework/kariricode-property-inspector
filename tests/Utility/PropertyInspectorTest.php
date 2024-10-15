@@ -6,15 +6,16 @@ namespace KaririCode\PropertyInspector\Tests;
 
 use KaririCode\PropertyInspector\Contract\AttributeAnalyzer;
 use KaririCode\PropertyInspector\Contract\PropertyAttributeHandler;
+use KaririCode\PropertyInspector\Contract\PropertyInspector as PropertyInspectorContract;
 use KaririCode\PropertyInspector\Exception\PropertyInspectionException;
-use KaririCode\PropertyInspector\PropertyInspector;
+use KaririCode\PropertyInspector\Utility\PropertyInspector;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 final class PropertyInspectorTest extends TestCase
 {
     private AttributeAnalyzer|MockObject $analyzer;
-    private PropertyInspector $inspector;
+    private PropertyInspectorContract $inspector;
 
     protected function setUp(): void
     {
