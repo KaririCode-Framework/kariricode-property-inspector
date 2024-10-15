@@ -7,7 +7,7 @@ namespace KaririCode\PropertyInspector\Tests\Exception;
 use KaririCode\PropertyInspector\Contract\AttributeAnalyzer as AttributeAnalyzerInterface;
 use KaririCode\PropertyInspector\Contract\PropertyAttributeHandler;
 use KaririCode\PropertyInspector\Exception\PropertyInspectionException;
-use KaririCode\PropertyInspector\PropertyInspector;
+use KaririCode\PropertyInspector\Utility\PropertyInspector;
 use PHPUnit\Framework\TestCase;
 
 class ReflectionExceptionTest extends TestCase
