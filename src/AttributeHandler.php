@@ -8,9 +8,10 @@ use KaririCode\Contract\Processor\ProcessableAttribute;
 use KaririCode\Contract\Processor\ProcessorBuilder;
 use KaririCode\ProcessorPipeline\Exception\ProcessingException;
 use KaririCode\PropertyInspector\Contract\PropertyAttributeHandler;
+use KaririCode\PropertyInspector\Contract\PropertyChangeApplier;
 use KaririCode\PropertyInspector\Utility\PropertyAccessor;
 
-class AttributeHandler implements PropertyAttributeHandler
+class AttributeHandler implements PropertyAttributeHandler, PropertyChangeApplier
 {
     private array $processedValues = [];
 
