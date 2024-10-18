@@ -101,4 +101,9 @@ class AttributeHandler implements PropertyAttributeHandler, PropertyChangeApplie
     {
         return $this->processingErrors;
     }
+
+    public function getProcessingMessages(): array
+    {
+        return $this->processingMessages;
+    }
 }
