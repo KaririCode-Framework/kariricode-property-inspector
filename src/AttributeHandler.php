@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace KaririCode\PropertyInspector;
 
-use KaririCode\Contract\Processor\ProcessableAttribute;
+use KaririCode\Contract\Processor\Attribute\CustomizableMessageAttribute;
+use KaririCode\Contract\Processor\Attribute\ProcessableAttribute;
 use KaririCode\Contract\Processor\ProcessorBuilder;
 use KaririCode\ProcessorPipeline\Exception\ProcessingException;
 use KaririCode\PropertyInspector\Contract\PropertyAttributeHandler;
@@ -14,6 +15,7 @@ use KaririCode\PropertyInspector\Utility\PropertyAccessor;
 class AttributeHandler implements PropertyAttributeHandler, PropertyChangeApplier
 {
     private array $processedValues = [];
+    private array $processingErrors = [];
 
     public function __construct(
         private readonly string $processorType,
@@ -27,28 +29,37 @@ class AttributeHandler implements PropertyAttributeHandler, PropertyChangeApplie
             return null;
         }
 
+        $processors = $attribute->getProcessors();
+
+        if ($attribute instanceof CustomizableMessageAttribute) {
+            foreach ($processors as $processorName => &$processorConfig) {
+                $customMessage = $attribute->getMessage($processorName);
+                if (null !== $customMessage) {
+                    $processorConfig['customMessage'] = $customMessage;
+                }
+            }
+            unset($processorConfig); // Break the reference after use
+        }
+
+        $pipeline = $this->builder->buildPipeline($this->processorType, $processors);
+
         try {
-            $pipeline = $this->builder->buildPipeline($this->processorType, $attribute->getProcessors());
             $processedValue = $pipeline->process($value);
-            $this->processedValues[$propertyName][] = $processedValue;
+            $this->processedValues[$propertyName] = $processedValue;
 
             return $processedValue;
         } catch (ProcessingException $e) {
-            $fallbackValue = $attribute->getFallbackValue() ?? $value;
-            $this->processedValues[$propertyName][] = $fallbackValue;
+            $this->processingErrors[$propertyName][] = $e->getMessage();
 
-            return $fallbackValue;
+            return $value; // Return original value in case of processing error
         }
     }
 
     public function applyChanges(object $entity): void
     {
-        foreach ($this->processedValues as $propertyName => $values) {
-            if (!empty($values)) {
-                $finalValue = end($values);
-                $accessor = new PropertyAccessor($entity, $propertyName);
-                $accessor->setValue($finalValue);
-            }
+        foreach ($this->processedValues as $propertyName => $value) {
+            $accessor = new PropertyAccessor($entity, $propertyName);
+            $accessor->setValue($value);
         }
         $this->processedValues = []; // Clear the processed values after applying
     }
@@ -56,5 +67,10 @@ class AttributeHandler implements PropertyAttributeHandler, PropertyChangeApplie
     public function getProcessedValues(): array
     {
         return $this->processedValues;
+    }
+
+    public function getProcessingErrors(): array
+    {
+        return $this->processingErrors;
     }
 }
