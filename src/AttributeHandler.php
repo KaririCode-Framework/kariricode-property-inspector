@@ -32,13 +32,12 @@ class AttributeHandler implements PropertyAttributeHandler, PropertyChangeApplie
         $processors = $attribute->getProcessors();
 
         if ($attribute instanceof CustomizableMessageAttribute) {
-            foreach ($processors as $processorName => &$processorConfig) {
+            foreach ($processors as $processorName => &$config) {
                 $customMessage = $attribute->getMessage($processorName);
                 if (null !== $customMessage) {
-                    $processorConfig['customMessage'] = $customMessage;
+                    $config['customMessage'] = $customMessage;
                 }
             }
-            unset($processorConfig); // Break the reference after use
         }
 
         $pipeline = $this->builder->buildPipeline($this->processorType, $processors);
