@@ -7,19 +7,21 @@ namespace KaririCode\PropertyInspector;
 use KaririCode\Contract\Processor\Attribute\CustomizableMessageAttribute;
 use KaririCode\Contract\Processor\Attribute\ProcessableAttribute;
 use KaririCode\Contract\Processor\ProcessorBuilder;
-use KaririCode\ProcessorPipeline\Exception\ProcessingException;
 use KaririCode\PropertyInspector\Contract\PropertyAttributeHandler;
 use KaririCode\PropertyInspector\Contract\PropertyChangeApplier;
+use KaririCode\PropertyInspector\Processor\ProcessorConfigBuilder;
 use KaririCode\PropertyInspector\Utility\PropertyAccessor;
 
 class AttributeHandler implements PropertyAttributeHandler, PropertyChangeApplier
 {
     private array $processedValues = [];
     private array $processingErrors = [];
+    private array $processingMessages = [];
 
     public function __construct(
         private readonly string $processorType,
         private readonly ProcessorBuilder $builder,
+        private readonly ProcessorConfigBuilder $configBuilder = new ProcessorConfigBuilder()
     ) {
     }
 
@@ -29,38 +31,65 @@ class AttributeHandler implements PropertyAttributeHandler, PropertyChangeApplie
             return null;
         }
 
-        $processors = $attribute->getProcessors();
+        $processorsConfig = $this->configBuilder->build($attribute);
+        $messages = $this->extractCustomMessages($attribute, $processorsConfig);
+
+        try {
+            $processedValue = $this->processValue($value, $processorsConfig);
+            $this->storeProcessedValue($propertyName, $processedValue, $messages);
+
+            return $processedValue;  // Return the processed value, not the original
+        } catch (\Exception $e) {
+            $this->storeProcessingError($propertyName, $e->getMessage());
+
+            return $value;
+        }
+    }
+
+    private function extractCustomMessages(ProcessableAttribute $attribute, array &$processorsConfig): array
+    {
+        $messages = [];
 
         if ($attribute instanceof CustomizableMessageAttribute) {
-            foreach ($processors as $processorName => &$config) {
+            foreach ($processorsConfig as $processorName => &$config) {
                 $customMessage = $attribute->getMessage($processorName);
                 if (null !== $customMessage) {
                     $config['customMessage'] = $customMessage;
+                    $messages[$processorName] = $customMessage;
                 }
             }
         }
 
-        $pipeline = $this->builder->buildPipeline($this->processorType, $processors);
+        return $messages;
+    }
 
-        try {
-            $processedValue = $pipeline->process($value);
-            $this->processedValues[$propertyName] = $processedValue;
+    private function processValue(mixed $value, array $processorsConfig): mixed
+    {
+        $pipeline = $this->builder->buildPipeline($this->processorType, $processorsConfig);
 
-            return $processedValue;
-        } catch (ProcessingException $e) {
-            $this->processingErrors[$propertyName][] = $e->getMessage();
+        return $pipeline->process($value);
+    }
 
-            return $value; // Return original value in case of processing error
-        }
+    private function storeProcessedValue(string $propertyName, mixed $processedValue, array $messages): void
+    {
+        $this->processedValues[$propertyName] = [
+            'value' => $processedValue,
+            'messages' => $messages,
+        ];
+        $this->processingMessages[$propertyName] = $messages;
+    }
+
+    private function storeProcessingError(string $propertyName, string $errorMessage): void
+    {
+        $this->processingErrors[$propertyName][] = $errorMessage;
     }
 
     public function applyChanges(object $entity): void
     {
-        foreach ($this->processedValues as $propertyName => $value) {
+        foreach ($this->processedValues as $propertyName => $data) {
             $accessor = new PropertyAccessor($entity, $propertyName);
-            $accessor->setValue($value);
+            $accessor->setValue($data['value']);
         }
-        $this->processedValues = []; // Clear the processed values after applying
     }
 
     public function getProcessedValues(): array
