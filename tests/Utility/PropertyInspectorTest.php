@@ -68,11 +68,57 @@ final class PropertyInspectorTest extends TestCase
 
         $this->analyzer->expects($this->once())
             ->method('analyzeObject')
-            ->willThrowException(new PropertyInspectionException('Test exception'));
+            ->willThrowException(new \ReflectionException('Test exception'));
 
         $this->expectException(PropertyInspectionException::class);
-        $this->expectExceptionMessage('An error occurred during object analysis: Test exception');
+        $this->expectExceptionMessage('Failed to analyze object: Test exception');
 
         $this->inspector->inspect($object, $mockHandler);
+    }
+
+    public function testInspectWithHandlerReturningNull(): void
+    {
+        $object = new \stdClass();
+        $mockHandler = $this->createMock(PropertyAttributeHandler::class);
+
+        $this->analyzer->expects($this->once())
+            ->method('analyzeObject')
+            ->willReturn([
+                'property1' => [
+                    'value' => 'value1',
+                    'attributes' => [new \stdClass()],
+                ],
+            ]);
+
+        $mockHandler->expects($this->once())
+            ->method('handleAttribute')
+            ->willReturn(null);
+
+        $result = $this->inspector->inspect($object, $mockHandler);
+
+        $this->assertEmpty($result);
+    }
+
+    public function testInspectWithMultipleAttributes(): void
+    {
+        $object = new \stdClass();
+        $mockHandler = $this->createMock(PropertyAttributeHandler::class);
+
+        $this->analyzer->expects($this->once())
+            ->method('analyzeObject')
+            ->willReturn([
+                'property1' => [
+                    'value' => 'value1',
+                    'attributes' => [new \stdClass(), new \stdClass()],
+                ],
+            ]);
+
+        $mockHandler->expects($this->exactly(2))
+            ->method('handleAttribute')
+            ->willReturn('handled result');
+
+        $result = $this->inspector->inspect($object, $mockHandler);
+
+        $this->assertEquals(['property1' => ['handled result', 'handled result']], $result);
     }
 }

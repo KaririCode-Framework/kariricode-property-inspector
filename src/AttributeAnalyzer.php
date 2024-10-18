@@ -44,12 +44,14 @@ final class AttributeAnalyzer implements AttributeAnalyzerContract
         $property->setAccessible(true);
         $propertyValue = $property->getValue($object);
 
+        $attributeInstances = array_map(
+            static fn (\ReflectionAttribute $attr): object => $attr->newInstance(),
+            $attributes
+        );
+
         return [
             'value' => $propertyValue,
-            'attributes' => array_map(
-                static fn (\ReflectionAttribute $attr): object => $attr->newInstance(),
-                $attributes
-            ),
+            'attributes' => $attributeInstances,
         ];
     }
 }
