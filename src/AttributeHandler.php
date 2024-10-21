@@ -65,12 +65,17 @@ class AttributeHandler implements PropertyAttributeHandler, PropertyChangeApplie
                 $messages
             );
 
-            if (null !== $validationError) {
+            if ($this->shouldAddValidationError($validationError, $errors, $processorName)) {
                 $errors[$processorName] = $validationError;
             }
         }
 
         return $errors;
+    }
+
+    private function shouldAddValidationError(?array $validationError, array $errors, string $processorName): bool
+    {
+        return null !== $validationError && !isset($errors[$processorName]);
     }
 
     private function storeProcessingResultErrors(string $propertyName, array $errors): void
