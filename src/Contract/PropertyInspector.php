@@ -16,7 +16,7 @@ interface PropertyInspector
      *
      * @throws PropertyInspectionException If there's an error inspecting the object
      *
-     * @return array<string, array<int, mixed>> The inspection results
+     * @return PropertyAttributeHandler The inspection results
      */
-    public function inspect(object $object, PropertyAttributeHandler $handler): array;
+    public function inspect(object $object, PropertyAttributeHandler $handler): PropertyAttributeHandler;
 }
