@@ -11,6 +11,7 @@ use KaririCode\Contract\Processor\ProcessorBuilder;
 use KaririCode\ProcessorPipeline\Exception\ProcessingException;
 use KaririCode\PropertyInspector\AttributeHandler;
 use KaririCode\PropertyInspector\Processor\ProcessorConfigBuilder;
+use KaririCode\PropertyInspector\Processor\ProcessorValidator;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
@@ -24,20 +25,28 @@ final class AttributeHandlerTest extends TestCase
 {
     private AttributeHandler $attributeHandler;
     private ProcessorBuilder|MockObject $processorBuilder;
+    private ProcessorValidator|MockObject $processorValidator;
+    private ProcessorConfigBuilder|MockObject $configBuilder;
 
     protected function setUp(): void
     {
         $this->processorBuilder = $this->createMock(ProcessorBuilder::class);
-        $this->attributeHandler = new AttributeHandler('testProcessor', $this->processorBuilder);
+        $this->processorValidator = $this->createMock(ProcessorValidator::class);
+        $this->configBuilder = $this->createMock(ProcessorConfigBuilder::class);
+        $this->attributeHandler = new AttributeHandler(
+            'testProcessor',
+            $this->processorBuilder,
+            $this->processorValidator,
+            $this->configBuilder
+        );
     }
 
     public function testHandleAttributeProcessesValue(): void
     {
         $mockAttribute = $this->createMock(ProcessableAttribute::class);
         $mockPipeline = $this->createMock(Pipeline::class);
-        $mockConfigBuilder = $this->createMock(ProcessorConfigBuilder::class);
 
-        $mockConfigBuilder->expects($this->once())
+        $this->configBuilder->expects($this->once())
             ->method('build')
             ->willReturn(['processor1' => []]);
 
@@ -51,36 +60,45 @@ final class AttributeHandlerTest extends TestCase
             ->with($this->equalTo('testProcessor'), $this->equalTo(['processor1' => []]))
             ->willReturn($mockPipeline);
 
-        $attributeHandler = new AttributeHandler('testProcessor', $this->processorBuilder, $mockConfigBuilder);
+        $this->processorValidator->expects($this->once())
+            ->method('validate')
+            ->willReturn(null);
 
-        $result = $attributeHandler->handleAttribute('testProperty', $mockAttribute, 'initialValue');
+        $result = $this->attributeHandler->handleAttribute('testProperty', $mockAttribute, 'initialValue');
 
         $this->assertSame('processedValue', $result);
     }
 
-    public function testHandleAttributeReturnsOriginalValueOnException(): void
+    public function testHandleAttributeWithValidationError(): void
     {
         $mockAttribute = $this->createMock(ProcessableAttribute::class);
         $mockPipeline = $this->createMock(Pipeline::class);
 
+        $this->configBuilder->expects($this->once())
+            ->method('build')
+            ->willReturn(['processor1' => []]);
+
         $mockPipeline->expects($this->once())
             ->method('process')
-            ->willThrowException(new ProcessingException('Test exception'));
+            ->willReturn('processedValue');
 
         $this->processorBuilder->expects($this->once())
             ->method('buildPipeline')
             ->willReturn($mockPipeline);
 
-        $mockAttribute->expects($this->once())
-            ->method('getProcessors')
-            ->willReturn(['processor1']);
+        $this->processorValidator->expects($this->once())
+            ->method('validate')
+            ->willReturn(['errorKey' => 'testError', 'message' => 'Test error message']);
 
         $result = $this->attributeHandler->handleAttribute('testProperty', $mockAttribute, 'initialValue');
-        $this->assertSame('initialValue', $result);
 
-        $errors = $this->attributeHandler->getProcessingErrors();
+        $this->assertSame('processedValue', $result);
+
+        $errors = $this->attributeHandler->getProcessingResultErrors();
         $this->assertArrayHasKey('testProperty', $errors);
-        $this->assertContains('Test exception', $errors['testProperty']);
+        $this->assertArrayHasKey('processor1', $errors['testProperty']);
+        $this->assertEquals('testError', $errors['testProperty']['processor1']['errorKey']);
+        $this->assertEquals('Test error message', $errors['testProperty']['processor1']['message']);
     }
 
     public function testHandleAttributeReturnsNullWhenAttributeNotProcessable(): void
@@ -99,6 +117,10 @@ final class AttributeHandlerTest extends TestCase
         $mockAttribute = $this->createMock(ProcessableAttribute::class);
         $mockPipeline = $this->createMock(Pipeline::class);
 
+        $this->configBuilder->expects($this->once())
+            ->method('build')
+            ->willReturn(['processor1' => []]);
+
         $mockPipeline->expects($this->once())
             ->method('process')
             ->with('initialValue')
@@ -108,9 +130,9 @@ final class AttributeHandlerTest extends TestCase
             ->method('buildPipeline')
             ->willReturn($mockPipeline);
 
-        $mockAttribute->expects($this->once())
-            ->method('getProcessors')
-            ->willReturn(['processor1']);
+        $this->processorValidator->expects($this->once())
+            ->method('validate')
+            ->willReturn(null);
 
         $this->attributeHandler->handleAttribute('testProperty', $mockAttribute, 'initialValue');
         $this->attributeHandler->applyChanges($mockEntity);
@@ -118,11 +140,14 @@ final class AttributeHandlerTest extends TestCase
         $this->assertSame('processedValue', $mockEntity->testProperty);
     }
 
-    public function testGetProcessedValuesReturnsProcessedData(): void
+    public function testGetProcessedPropertyValuesReturnsProcessedData(): void
     {
         $mockAttribute = $this->createMock(ProcessableAttribute::class);
         $mockPipeline = $this->createMock(Pipeline::class);
-        $mockConfigBuilder = $this->createMock(ProcessorConfigBuilder::class);
+
+        $this->configBuilder->expects($this->once())
+            ->method('build')
+            ->willReturn(['processor1' => []]);
 
         $mockPipeline->expects($this->once())
             ->method('process')
@@ -133,13 +158,12 @@ final class AttributeHandlerTest extends TestCase
             ->method('buildPipeline')
             ->willReturn($mockPipeline);
 
-        $mockConfigBuilder->expects($this->once())
-            ->method('build')
-            ->willReturn(['processor1' => []]);
+        $this->processorValidator->expects($this->once())
+            ->method('validate')
+            ->willReturn(null);
 
-        $attributeHandler = new AttributeHandler('testProcessor', $this->processorBuilder, $mockConfigBuilder);
-        $attributeHandler->handleAttribute('testProperty', $mockAttribute, 'initialValue');
-        $processedValues = $attributeHandler->getProcessedValues();
+        $this->attributeHandler->handleAttribute('testProperty', $mockAttribute, 'initialValue');
+        $processedValues = $this->attributeHandler->getProcessedPropertyValues();
 
         $this->assertArrayHasKey('testProperty', $processedValues);
         $this->assertIsArray($processedValues['testProperty']);
@@ -151,10 +175,11 @@ final class AttributeHandlerTest extends TestCase
 
     public function testHandleAttributeWithCustomizableMessageAttribute(): void
     {
-        // Create a mock of the combined interface
         $mockAttribute = $this->createMock(CombinedAttribute::class);
+        $mockPipeline = $this->createMock(Pipeline::class);
 
-        $mockAttribute->method('getProcessors')
+        $this->configBuilder->expects($this->once())
+            ->method('build')
             ->willReturn(['processor1' => ['option' => 'value']]);
 
         $mockAttribute->expects($this->once())
@@ -162,29 +187,34 @@ final class AttributeHandlerTest extends TestCase
             ->with('processor1')
             ->willReturn('Custom message');
 
-        $mockPipeline = $this->createMock(Pipeline::class);
         $mockPipeline->method('process')->willReturn('processedValue');
 
         $this->processorBuilder->expects($this->once())
             ->method('buildPipeline')
-            ->with('testProcessor', ['processor1' => ['option' => 'value', 'customMessage' => 'Custom message']])
             ->willReturn($mockPipeline);
+
+        $this->processorValidator->expects($this->once())
+            ->method('validate')
+            ->willReturn(null);
 
         $result = $this->attributeHandler->handleAttribute('testProperty', $mockAttribute, 'initialValue');
         $this->assertSame('processedValue', $result);
 
-        // Since getProcessors is mocked, we need to simulate the processors array
-        $processors = ['processor1' => ['option' => 'value', 'customMessage' => 'Custom message']];
-
-        $this->assertArrayHasKey('processor1', $processors);
-        $this->assertArrayHasKey('customMessage', $processors['processor1']);
-        $this->assertEquals('Custom message', $processors['processor1']['customMessage']);
+        $processedValues = $this->attributeHandler->getProcessedPropertyValues();
+        $this->assertArrayHasKey('testProperty', $processedValues);
+        $this->assertArrayHasKey('messages', $processedValues['testProperty']);
+        $this->assertArrayHasKey('processor1', $processedValues['testProperty']['messages']);
+        $this->assertEquals('Custom message', $processedValues['testProperty']['messages']['processor1']);
     }
 
-    public function testGetProcessingErrors(): void
+    public function testHandleAttributeWithProcessingException(): void
     {
         $mockAttribute = $this->createMock(ProcessableAttribute::class);
         $mockPipeline = $this->createMock(Pipeline::class);
+
+        $this->configBuilder->expects($this->once())
+            ->method('build')
+            ->willReturn(['processor1' => []]);
 
         $mockPipeline->expects($this->once())
             ->method('process')
@@ -194,13 +224,10 @@ final class AttributeHandlerTest extends TestCase
             ->method('buildPipeline')
             ->willReturn($mockPipeline);
 
-        $mockAttribute->expects($this->once())
-            ->method('getProcessors')
-            ->willReturn(['processor1']);
+        $result = $this->attributeHandler->handleAttribute('testProperty', $mockAttribute, 'initialValue');
+        $this->assertSame('initialValue', $result);
 
-        $this->attributeHandler->handleAttribute('testProperty', $mockAttribute, 'initialValue');
-        $errors = $this->attributeHandler->getProcessingErrors();
-
+        $errors = $this->attributeHandler->getProcessingResultErrors();
         $this->assertArrayHasKey('testProperty', $errors);
         $this->assertContains('Test error', $errors['testProperty']);
     }

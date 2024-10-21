@@ -10,17 +10,19 @@ use KaririCode\Contract\Processor\ProcessorBuilder;
 use KaririCode\PropertyInspector\Contract\PropertyAttributeHandler;
 use KaririCode\PropertyInspector\Contract\PropertyChangeApplier;
 use KaririCode\PropertyInspector\Processor\ProcessorConfigBuilder;
+use KaririCode\PropertyInspector\Processor\ProcessorValidator;
 use KaririCode\PropertyInspector\Utility\PropertyAccessor;
 
 class AttributeHandler implements PropertyAttributeHandler, PropertyChangeApplier
 {
-    private array $processedValues = [];
-    private array $processingErrors = [];
-    private array $processingMessages = [];
+    private array $processedPropertyValues = [];
+    private array $processingResultErrors = [];
+    private array $processingResultMessages = [];
 
     public function __construct(
         private readonly string $processorType,
         private readonly ProcessorBuilder $builder,
+        private readonly ProcessorValidator $validator = new ProcessorValidator(),
         private readonly ProcessorConfigBuilder $configBuilder = new ProcessorConfigBuilder()
     ) {
     }
@@ -36,20 +38,49 @@ class AttributeHandler implements PropertyAttributeHandler, PropertyChangeApplie
 
         try {
             $processedValue = $this->processValue($value, $processorsConfig);
-            $this->storeProcessedValue($propertyName, $processedValue, $messages);
+            $errors = $this->validateProcessors($processorsConfig, $messages);
 
-            return $processedValue;  // Return the processed value, not the original
+            $this->storeProcessedPropertyValue($propertyName, $processedValue, $messages);
+
+            if (!empty($errors)) {
+                $this->storeProcessingResultErrors($propertyName, $errors);
+            }
+
+            return $processedValue;
         } catch (\Exception $e) {
-            $this->storeProcessingError($propertyName, $e->getMessage());
+            $this->storeProcessingResultError($propertyName, $e->getMessage());
 
             return $value;
         }
     }
 
+    private function validateProcessors(array $processorsConfig, array $messages): array
+    {
+        $errors = [];
+        foreach ($processorsConfig as $processorName => $config) {
+            $processor = $this->builder->build($this->processorType, $processorName, $config);
+            $validationError = $this->validator->validate(
+                $processor,
+                $processorName,
+                $messages
+            );
+
+            if (null !== $validationError) {
+                $errors[$processorName] = $validationError;
+            }
+        }
+
+        return $errors;
+    }
+
+    private function storeProcessingResultErrors(string $propertyName, array $errors): void
+    {
+        $this->processingResultErrors[$propertyName] = $errors;
+    }
+
     private function extractCustomMessages(ProcessableAttribute $attribute, array &$processorsConfig): array
     {
         $messages = [];
-
         if ($attribute instanceof CustomizableMessageAttribute) {
             foreach ($processorsConfig as $processorName => &$config) {
                 $customMessage = $attribute->getMessage($processorName);
@@ -65,45 +96,48 @@ class AttributeHandler implements PropertyAttributeHandler, PropertyChangeApplie
 
     private function processValue(mixed $value, array $processorsConfig): mixed
     {
-        $pipeline = $this->builder->buildPipeline($this->processorType, $processorsConfig);
+        $pipeline = $this->builder->buildPipeline(
+            $this->processorType,
+            $processorsConfig
+        );
 
         return $pipeline->process($value);
     }
 
-    private function storeProcessedValue(string $propertyName, mixed $processedValue, array $messages): void
+    private function storeProcessedPropertyValue(string $propertyName, mixed $processedValue, array $messages): void
     {
-        $this->processedValues[$propertyName] = [
+        $this->processedPropertyValues[$propertyName] = [
             'value' => $processedValue,
             'messages' => $messages,
         ];
-        $this->processingMessages[$propertyName] = $messages;
+        $this->processingResultMessages[$propertyName] = $messages;
     }
 
-    private function storeProcessingError(string $propertyName, string $errorMessage): void
+    private function storeProcessingResultError(string $propertyName, string $errorMessage): void
     {
-        $this->processingErrors[$propertyName][] = $errorMessage;
+        $this->processingResultErrors[$propertyName][] = $errorMessage;
     }
 
     public function applyChanges(object $entity): void
     {
-        foreach ($this->processedValues as $propertyName => $data) {
+        foreach ($this->processedPropertyValues as $propertyName => $data) {
             $accessor = new PropertyAccessor($entity, $propertyName);
             $accessor->setValue($data['value']);
         }
     }
 
-    public function getProcessedValues(): array
+    public function getProcessedPropertyValues(): array
     {
-        return $this->processedValues;
+        return $this->processedPropertyValues;
     }
 
-    public function getProcessingErrors(): array
+    public function getProcessingResultErrors(): array
     {
-        return $this->processingErrors;
+        return $this->processingResultErrors;
     }
 
-    public function getProcessingMessages(): array
+    public function getProcessingResultMessages(): array
     {
-        return $this->processingMessages;
+        return $this->processingResultMessages;
     }
 }
