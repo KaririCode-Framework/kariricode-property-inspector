@@ -15,26 +15,21 @@ final class PropertyInspector implements PropertyInspectorContract
     {
     }
 
-    public function inspect(object $object, PropertyAttributeHandler $handler): array
+    public function inspect(object $object, PropertyAttributeHandler $handler): PropertyAttributeHandler
     {
         try {
             $analysisResults = $this->attributeAnalyzer->analyzeObject($object);
-            $handledResults = [];
-
             foreach ($analysisResults as $propertyName => $propertyData) {
                 foreach ($propertyData['attributes'] as $attribute) {
-                    $result = $handler->handleAttribute($propertyName, $attribute, $propertyData['value']);
-                    if (null !== $result) {
-                        $handledResults[$propertyName][] = $result;
-                    }
+                    $handler->handleAttribute($propertyName, $attribute, $propertyData['value']);
                 }
             }
 
-            return $handledResults;
+            return $handler;
         } catch (\ReflectionException $e) {
             throw new PropertyInspectionException('Failed to analyze object: ' . $e->getMessage(), 0, $e);
         } catch (\Exception $e) {
-            throw new PropertyInspectionException('An error occurred during object analysis: ' . $e->getMessage(), 0, $e);
+            throw new PropertyInspectionException('An exception occurred during object analysis: ' . $e->getMessage(), 0, $e);
         } catch (\Error $e) {
             throw new PropertyInspectionException('An error occurred during object analysis: ' . $e->getMessage(), 0, $e);
         }

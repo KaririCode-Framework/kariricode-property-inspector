@@ -40,11 +40,11 @@ final class PropertyInspectorTest extends TestCase
 
         $mockHandler->expects($this->once())
             ->method('handleAttribute')
-            ->willReturn('handled result');
+            ->with('property1', $this->isInstanceOf(\stdClass::class), 'value1');
 
         $result = $this->inspector->inspect($object, $mockHandler);
 
-        $this->assertEquals(['property1' => ['handled result']], $result);
+        $this->assertSame($mockHandler, $result);
     }
 
     public function testInspectWithNoResults(): void
@@ -56,9 +56,12 @@ final class PropertyInspectorTest extends TestCase
             ->method('analyzeObject')
             ->willReturn([]);
 
+        $mockHandler->expects($this->never())
+            ->method('handleAttribute');
+
         $result = $this->inspector->inspect($object, $mockHandler);
 
-        $this->assertEmpty($result);
+        $this->assertSame($mockHandler, $result);
     }
 
     public function testInspectWithAnalyzerException(): void
@@ -74,29 +77,6 @@ final class PropertyInspectorTest extends TestCase
         $this->expectExceptionMessage('Failed to analyze object: Test exception');
 
         $this->inspector->inspect($object, $mockHandler);
-    }
-
-    public function testInspectWithHandlerReturningNull(): void
-    {
-        $object = new \stdClass();
-        $mockHandler = $this->createMock(PropertyAttributeHandler::class);
-
-        $this->analyzer->expects($this->once())
-            ->method('analyzeObject')
-            ->willReturn([
-                'property1' => [
-                    'value' => 'value1',
-                    'attributes' => [new \stdClass()],
-                ],
-            ]);
-
-        $mockHandler->expects($this->once())
-            ->method('handleAttribute')
-            ->willReturn(null);
-
-        $result = $this->inspector->inspect($object, $mockHandler);
-
-        $this->assertEmpty($result);
     }
 
     public function testInspectWithMultipleAttributes(): void
@@ -115,10 +95,40 @@ final class PropertyInspectorTest extends TestCase
 
         $mockHandler->expects($this->exactly(2))
             ->method('handleAttribute')
-            ->willReturn('handled result');
+            ->with('property1', $this->isInstanceOf(\stdClass::class), 'value1');
 
         $result = $this->inspector->inspect($object, $mockHandler);
 
-        $this->assertEquals(['property1' => ['handled result', 'handled result']], $result);
+        $this->assertSame($mockHandler, $result);
+    }
+
+    public function testInspectWithGeneralException(): void
+    {
+        $object = new \stdClass();
+        $mockHandler = $this->createMock(PropertyAttributeHandler::class);
+
+        $this->analyzer->expects($this->once())
+            ->method('analyzeObject')
+            ->willThrowException(new \Exception('General exception'));
+
+        $this->expectException(PropertyInspectionException::class);
+        $this->expectExceptionMessage('An exception occurred during object analysis: General exception');
+
+        $this->inspector->inspect($object, $mockHandler);
+    }
+
+    public function testInspectWithError(): void
+    {
+        $object = new \stdClass();
+        $mockHandler = $this->createMock(PropertyAttributeHandler::class);
+
+        $this->analyzer->expects($this->once())
+            ->method('analyzeObject')
+            ->willThrowException(new \Error('Fatal error'));
+
+        $this->expectException(PropertyInspectionException::class);
+        $this->expectExceptionMessage('An error occurred during object analysis: Fatal error');
+
+        $this->inspector->inspect($object, $mockHandler);
     }
 }
