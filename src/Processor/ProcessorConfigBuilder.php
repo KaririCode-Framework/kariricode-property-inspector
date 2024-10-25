@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace KaririCode\PropertyInspector\Processor;
 
 use KaririCode\Contract\Processor\Attribute\ProcessableAttribute;
+use KaririCode\PropertyInspector\Contract\ProcessorConfigBuilder as ProcessorConfigBuilderContract;
 
-readonly class ProcessorConfigBuilder
+readonly class ProcessorConfigBuilder implements ProcessorConfigBuilderContract
 {
     public function build(ProcessableAttribute $attribute): array
     {

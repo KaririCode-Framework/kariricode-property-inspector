@@ -45,7 +45,8 @@
     "phpstan/phpstan": "^1.10",
     "phpunit/phpunit": "^11.0",
     "squizlabs/php_codesniffer": "^3.9",
-    "enlightn/security-checker": "^2.0"
+    "enlightn/security-checker": "^2.0",
+    "kariricode/validator": "^1.0"
   },
   "support": {
     "issues": "https://github.com/KaririCode-Framework/kariricode-property-inspector/issues",

@@ -7,9 +7,9 @@ namespace KaririCode\PropertyInspector;
 use KaririCode\PropertyInspector\Contract\AttributeAnalyzer as AttributeAnalyzerContract;
 use KaririCode\PropertyInspector\Exception\PropertyInspectionException;
 
-final class AttributeAnalyzer implements AttributeAnalyzerContract
+final readonly class AttributeAnalyzer implements AttributeAnalyzerContract
 {
-    public function __construct(private readonly string $attributeClass)
+    public function __construct(private string $attributeClass)
     {
     }
 
