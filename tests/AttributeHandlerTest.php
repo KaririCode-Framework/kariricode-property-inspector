@@ -8,7 +8,7 @@ use KaririCode\Contract\Processor\Attribute\CustomizableMessageAttribute;
 use KaririCode\Contract\Processor\Attribute\ProcessableAttribute;
 use KaririCode\Contract\Processor\Pipeline;
 use KaririCode\Contract\Processor\ProcessorBuilder;
-use KaririCode\ProcessorPipeline\Exception\ProcessingException;
+use KaririCode\ProcessorPipeline\Exception\ProcessorRuntimeException;
 use KaririCode\PropertyInspector\AttributeHandler;
 use KaririCode\PropertyInspector\Processor\ProcessorConfigBuilder;
 use KaririCode\PropertyInspector\Processor\ProcessorValidator;
@@ -218,7 +218,9 @@ final class AttributeHandlerTest extends TestCase
 
         $mockPipeline->expects($this->once())
             ->method('process')
-            ->willThrowException(new ProcessingException('Test error'));
+            ->willThrowException(
+                ProcessorRuntimeException::contextNotFound('payment')
+            );
 
         $this->processorBuilder->expects($this->once())
             ->method('buildPipeline')
@@ -228,7 +230,7 @@ final class AttributeHandlerTest extends TestCase
         $this->assertSame('initialValue', $result);
 
         $errors = $this->attributeHandler->getProcessingResultErrors();
-        $this->assertArrayHasKey('testProperty', $errors);
-        $this->assertContains('Test error', $errors['testProperty']);
+
+        $this->assertStringContainsString("Processor context 'payment' not found", $errors['testProperty'][0]);
     }
 }

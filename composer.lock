@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "kariricode/contract",
-            "version": "v2.7.10",
+            "version": "v2.8.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/KaririCode-Framework/kariricode-contract.git",
-                "reference": "84db138e9e03e7173ee1a37d75fa21d756a6d060"
+                "reference": "ee489bbcb44339a246af01058e00b3f94891f66c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/KaririCode-Framework/kariricode-contract/zipball/84db138e9e03e7173ee1a37d75fa21d756a6d060",
-                "reference": "84db138e9e03e7173ee1a37d75fa21d756a6d060",
+                "url": "https://api.github.com/repos/KaririCode-Framework/kariricode-contract/zipball/ee489bbcb44339a246af01058e00b3f94891f66c",
+                "reference": "ee489bbcb44339a246af01058e00b3f94891f66c",
                 "shasum": ""
             },
             "require": {
@@ -66,7 +66,7 @@
                 "issues": "https://github.com/KaririCode-Framework/kariricode-contract/issues",
                 "source": "https://github.com/KaririCode-Framework/kariricode-contract"
             },
-            "time": "2024-10-21T18:32:50+00:00"
+            "time": "2024-10-25T17:45:25+00:00"
         },
         {
             "name": "kariricode/data-structure",
@@ -143,22 +143,81 @@
             "time": "2024-10-10T22:37:23+00:00"
         },
         {
-            "name": "kariricode/processor-pipeline",
-            "version": "v1.1.5",
+            "name": "kariricode/exception",
+            "version": "v1.2.2",
             "source": {
                 "type": "git",
-                "url": "https://github.com/KaririCode-Framework/kariricode-processor-pipeline.git",
-                "reference": "6bc3e747f254c56b5fc0cbdf22b1d3ce1497a7d0"
+                "url": "https://github.com/KaririCode-Framework/kariricode-exception.git",
+                "reference": "ec5d9be5bda95e7d35ff3a230ec9afbf6f53c44d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/KaririCode-Framework/kariricode-processor-pipeline/zipball/6bc3e747f254c56b5fc0cbdf22b1d3ce1497a7d0",
-                "reference": "6bc3e747f254c56b5fc0cbdf22b1d3ce1497a7d0",
+                "url": "https://api.github.com/repos/KaririCode-Framework/kariricode-exception/zipball/ec5d9be5bda95e7d35ff3a230ec9afbf6f53c44d",
+                "reference": "ec5d9be5bda95e7d35ff3a230ec9afbf6f53c44d",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "enlightn/security-checker": "^2.0",
+                "friendsofphp/php-cs-fixer": "^3.51",
+                "phpstan/phpstan": "^1.10",
+                "phpunit/phpunit": "^11.0",
+                "squizlabs/php_codesniffer": "^3.9"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "KaririCode\\Exception\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Walmir Silva",
+                    "email": "community@kariricode.org"
+                }
+            ],
+            "description": "KaririCode Exception provides a robust and modular exception handling system for the KaririCode Framework, enabling seamless error management across various application domains.",
+            "homepage": "https://kariricode.org",
+            "keywords": [
+                "error-management",
+                "exception-handling",
+                "framework",
+                "kariri-code",
+                "modular-exceptions",
+                "php-exceptions",
+                "php-framework"
+            ],
+            "support": {
+                "issues": "https://github.com/KaririCode-Framework/kariricode-exception/issues",
+                "source": "https://github.com/KaririCode-Framework/kariricode-exception"
+            },
+            "time": "2024-10-25T18:13:01+00:00"
+        },
+        {
+            "name": "kariricode/processor-pipeline",
+            "version": "v1.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/KaririCode-Framework/kariricode-processor-pipeline.git",
+                "reference": "cb916d9fdb3193d895167748efa04f0833782ab9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/KaririCode-Framework/kariricode-processor-pipeline/zipball/cb916d9fdb3193d895167748efa04f0833782ab9",
+                "reference": "cb916d9fdb3193d895167748efa04f0833782ab9",
                 "shasum": ""
             },
             "require": {
                 "kariricode/contract": "^2.7",
                 "kariricode/data-structure": "^1.1",
+                "kariricode/exception": "^1.2",
+                "kariricode/property-inspector": "^1.0",
                 "php": "^8.3"
             },
             "require-dev": {
@@ -199,7 +258,7 @@
                 "issues": "https://github.com/KaririCode-Framework/kariricode-processor-pipeline/issues",
                 "source": "https://github.com/KaririCode-Framework/kariricode-processor-pipeline"
             },
-            "time": "2024-10-18T18:33:05+00:00"
+            "time": "2024-10-25T18:44:51+00:00"
         }
     ],
     "packages-dev": [
@@ -1094,63 +1153,6 @@
                 }
             ],
             "time": "2024-07-18T11:15:46+00:00"
-        },
-        {
-            "name": "kariricode/exception",
-            "version": "v1.2.1",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/KaririCode-Framework/kariricode-exception.git",
-                "reference": "65c8eb72c581eb8c33c168e5df104ed260843303"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/KaririCode-Framework/kariricode-exception/zipball/65c8eb72c581eb8c33c168e5df104ed260843303",
-                "reference": "65c8eb72c581eb8c33c168e5df104ed260843303",
-                "shasum": ""
-            },
-            "require": {
-                "php": "^8.3"
-            },
-            "require-dev": {
-                "enlightn/security-checker": "^2.0",
-                "friendsofphp/php-cs-fixer": "^3.51",
-                "phpstan/phpstan": "^1.10",
-                "phpunit/phpunit": "^11.0",
-                "squizlabs/php_codesniffer": "^3.9"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "KaririCode\\Exception\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Walmir Silva",
-                    "email": "community@kariricode.org"
-                }
-            ],
-            "description": "KaririCode Exception provides a robust and modular exception handling system for the KaririCode Framework, enabling seamless error management across various application domains.",
-            "homepage": "https://kariricode.org",
-            "keywords": [
-                "error-management",
-                "exception-handling",
-                "framework",
-                "kariri-code",
-                "modular-exceptions",
-                "php-exceptions",
-                "php-framework"
-            ],
-            "support": {
-                "issues": "https://github.com/KaririCode-Framework/kariricode-exception/issues",
-                "source": "https://github.com/KaririCode-Framework/kariricode-exception"
-            },
-            "time": "2024-10-17T22:43:32+00:00"
         },
         {
             "name": "kariricode/validator",
