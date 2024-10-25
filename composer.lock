@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "fc6bb777fb8ffdc7815f7962441ad228",
+    "content-hash": "789260e11a472e31aeb935652229ca59",
     "packages": [
         {
             "name": "kariricode/contract",
@@ -1094,6 +1094,126 @@
                 }
             ],
             "time": "2024-07-18T11:15:46+00:00"
+        },
+        {
+            "name": "kariricode/exception",
+            "version": "v1.2.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/KaririCode-Framework/kariricode-exception.git",
+                "reference": "65c8eb72c581eb8c33c168e5df104ed260843303"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/KaririCode-Framework/kariricode-exception/zipball/65c8eb72c581eb8c33c168e5df104ed260843303",
+                "reference": "65c8eb72c581eb8c33c168e5df104ed260843303",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "enlightn/security-checker": "^2.0",
+                "friendsofphp/php-cs-fixer": "^3.51",
+                "phpstan/phpstan": "^1.10",
+                "phpunit/phpunit": "^11.0",
+                "squizlabs/php_codesniffer": "^3.9"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "KaririCode\\Exception\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Walmir Silva",
+                    "email": "community@kariricode.org"
+                }
+            ],
+            "description": "KaririCode Exception provides a robust and modular exception handling system for the KaririCode Framework, enabling seamless error management across various application domains.",
+            "homepage": "https://kariricode.org",
+            "keywords": [
+                "error-management",
+                "exception-handling",
+                "framework",
+                "kariri-code",
+                "modular-exceptions",
+                "php-exceptions",
+                "php-framework"
+            ],
+            "support": {
+                "issues": "https://github.com/KaririCode-Framework/kariricode-exception/issues",
+                "source": "https://github.com/KaririCode-Framework/kariricode-exception"
+            },
+            "time": "2024-10-17T22:43:32+00:00"
+        },
+        {
+            "name": "kariricode/validator",
+            "version": "1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/KaririCode-Framework/kariricode-validator.git",
+                "reference": "885b4b157983bf601f99efda85ddd4052256db97"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/KaririCode-Framework/kariricode-validator/zipball/885b4b157983bf601f99efda85ddd4052256db97",
+                "reference": "885b4b157983bf601f99efda85ddd4052256db97",
+                "shasum": ""
+            },
+            "require": {
+                "kariricode/contract": "^2.7",
+                "kariricode/exception": "^1.0",
+                "kariricode/processor-pipeline": "^1.1",
+                "kariricode/property-inspector": "^1.0",
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "enlightn/security-checker": "^2.0",
+                "friendsofphp/php-cs-fixer": "^3.51",
+                "phpstan/phpstan": "^1.10",
+                "phpunit/phpunit": "^11.0",
+                "squizlabs/php_codesniffer": "^3.9"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "KaririCode\\Validator\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Walmir Silva",
+                    "email": "community@kariricode.org"
+                }
+            ],
+            "description": "A robust and flexible data sanitization component for PHP, part of the KaririCode Framework, utilizing configurable processors and native functions.",
+            "homepage": "https://kariricode.org",
+            "keywords": [
+                "KaririCode",
+                "attribute",
+                "data",
+                "entity",
+                "php",
+                "pipeline",
+                "processor",
+                "validation",
+                "validator"
+            ],
+            "support": {
+                "issues": "https://github.com/KaririCode-Framework/kariricode-validator/issues",
+                "source": "https://github.com/KaririCode-Framework/kariricode-validator"
+            },
+            "time": "2024-10-23T22:10:44+00:00"
         },
         {
             "name": "myclabs/deep-copy",

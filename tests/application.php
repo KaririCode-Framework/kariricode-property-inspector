@@ -4,178 +4,178 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use KaririCode\PropertyInspector\AttributeAnalyzer;
-use KaririCode\PropertyInspector\Contract\PropertyAttributeHandler;
-use KaririCode\PropertyInspector\Exception\PropertyInspectionException;
-use KaririCode\PropertyInspector\PropertyInspector;
+use KaririCode\ProcessorPipeline\ProcessorRegistry;
+use KaririCode\Validator\Attribute\Validate;
+use KaririCode\Validator\Processor\Input\EmailValidator;
+use KaririCode\Validator\Processor\Input\LengthValidator;
+use KaririCode\Validator\Processor\Logic\RequiredValidator;
+use KaririCode\Validator\Processor\Numeric\IntegerValidator;
+use KaririCode\Validator\Processor\Numeric\RangeValidator;
+use KaririCode\Validator\Validator;
 
-// Custom Attributes
-#[Attribute(Attribute::TARGET_PROPERTY)]
-final class Validate
-{
-    public function __construct(public readonly array $rules)
-    {
-    }
-}
-
-#[Attribute(Attribute::TARGET_PROPERTY)]
-final class Sanitize
-{
-    public function __construct(public readonly string $method)
-    {
-    }
-}
-
-// Sample Entity
-final class User
+// 1. Define the entity class with validation rules
+class User
 {
     public function __construct(
-        #[Validate(['required', 'string', 'min:3'])]
-        #[Sanitize('trim')]
-        public string $name,
-        #[Validate(['required', 'email'])]
-        #[Sanitize('lowercase')]
-        public string $email,
-        #[Validate(['required', 'integer', 'min:18'])]
-        public int $age
+        #[Validate(
+            processors: [
+                'required',
+                'length' => ['minLength' => 3, 'maxLength' => 50],
+            ],
+            messages: [
+                'required' => 'Name is required',
+                'length' => 'Name must be between 3 and 50 characters',
+            ]
+        )]
+        private string $name = '',
+        #[Validate(
+            processors: ['required', 'email'],
+            messages: [
+                'required' => 'Email is required',
+                'email' => 'Invalid email format',
+            ]
+        )]
+        private string $email = '',
+        #[Validate(
+            processors: [
+                'required',
+                'integer',
+                'range' => ['min' => 18, 'max' => 120],
+            ],
+            messages: [
+                'required' => 'Age is required',
+                'integer' => 'Age must be a whole number',
+                'range' => 'Age must be between 18 and 120',
+            ]
+        )]
+        private int $age = 0
     ) {
     }
-}
 
-// Custom Attribute Handler
-final class CustomAttributeHandler implements PropertyAttributeHandler
-{
-    public function handleAttribute(object $object, string $propertyName, object $attribute, mixed $value): ?string
+    // Getters and setters
+    public function getName(): string
     {
-        return match (true) {
-            $attribute instanceof Validate => $this->validate($propertyName, $value, $attribute->rules),
-            $attribute instanceof Sanitize => $this->sanitize($propertyName, $value, $attribute->method),
-            default => null,
-        };
+        return $this->name;
     }
 
-    private function validate(string $propertyName, mixed $value, array $rules): ?string
+    public function setName(string $name): void
     {
-        $errors = array_filter(array_map(
-            fn ($rule) => $this->applyValidationRule($propertyName, $value, $rule),
-            $rules
-        ));
-
-        return empty($errors) ? null : implode(' ', $errors);
+        $this->name = $name;
     }
 
-    private function applyValidationRule(string $propertyName, mixed $value, string $rule): ?string
+    public function getEmail(): string
     {
-        return match (true) {
-            'required' === $rule && empty($value) => "$propertyName is required.",
-            'string' === $rule && !is_string($value) => "$propertyName must be a string.",
-            str_starts_with($rule, 'min:') => $this->validateMinRule($propertyName, $value, $rule),
-            'email' === $rule && !filter_var($value, FILTER_VALIDATE_EMAIL) => "$propertyName must be a valid email address.",
-            'integer' === $rule && !is_int($value) => "$propertyName must be an integer.",
-            default => null,
-        };
+        return $this->email;
     }
 
-    private function validateMinRule(string $propertyName, mixed $value, string $rule): ?string
+    public function setEmail(string $email): void
     {
-        $minValue = (int) substr($rule, 4);
-
-        return match (true) {
-            is_string($value) && strlen($value) < $minValue => "$propertyName must be at least $minValue characters long.",
-            is_int($value) && $value < $minValue => "$propertyName must be at least $minValue.",
-            default => null,
-        };
+        $this->email = $email;
     }
 
-    private function sanitize(string $propertyName, mixed $value, string $method): string
+    public function getAge(): int
     {
-        return match ($method) {
-            'trim' => trim($value),
-            'lowercase' => strtolower($value),
-            default => (string) $value,
-        };
+        return $this->age;
+    }
+
+    public function setAge(int $age): void
+    {
+        $this->age = $age;
     }
 }
 
-function runApplication(): void
+// 2. Set up the validator registry
+function setupValidatorRegistry(): ProcessorRegistry
 {
-    $attributeAnalyzer = new AttributeAnalyzer(Validate::class);
-    $propertyInspector = new PropertyInspector($attributeAnalyzer);
-    $handler = new CustomAttributeHandler();
+    $registry = new ProcessorRegistry();
 
-    // Scenario 1: Valid User
-    $validUser = new User('  WaLmir Silva  ', 'WALMIR.SILVA@EXAMPLE.COM', 25);
-    processUser($propertyInspector, $handler, $validUser, 'Scenario 1: Valid User');
+    // Register all required validators
+    $registry->register('validator', 'required', new RequiredValidator());
+    $registry->register('validator', 'email', new EmailValidator());
+    $registry->register('validator', 'length', new LengthValidator());
+    $registry->register('validator', 'integer', new IntegerValidator());
+    $registry->register('validator', 'range', new RangeValidator());
 
-    // Scenario 2: Invalid User (Age below 18)
-    $underageUser = new User('Walmir Silva', 'walmir@example.com', 16);
-    processUser($propertyInspector, $handler, $underageUser, 'Scenario 2: Underage User');
-
-    // Scenario 3: Invalid User (Empty name and invalid email)
-    $invalidUser = new User('', 'invalid-email', 30);
-    processUser($propertyInspector, $handler, $invalidUser, 'Scenario 3: Invalid User Data');
-
-    // Scenario 4: Non-existent Attribute (to trigger an exception)
-    try {
-        $invalidAttributeAnalyzer = new AttributeAnalyzer('NonExistentAttribute');
-        $invalidPropertyInspector = new PropertyInspector($invalidAttributeAnalyzer);
-        $invalidPropertyInspector->inspect($validUser, $handler);
-    } catch (PropertyInspectionException $e) {
-        echo "\nScenario 4: Non-existent Attribute\n";
-        echo 'Error: ' . $e->getMessage() . "\n";
-    }
+    return $registry;
 }
 
-function processUser(PropertyInspector $inspector, PropertyAttributeHandler $handler, User $user, string $scenario): void
+// 3. Helper function to display validation results
+function displayValidationResults(array $errors): void
 {
-    echo "\n$scenario\n";
-    echo 'Original User: ' . json_encode($user) . "\n";
-
-    try {
-        $results = $inspector->inspect($user, $handler);
-        displayResults($results);
-
-        if (empty($results)) {
-            sanitizeUser($user);
-            displaySanitizedUser($user);
-        } else {
-            echo "Validation failed. User was not sanitized.\n";
-        }
-    } catch (PropertyInspectionException $e) {
-        echo "An error occurred during property inspection: {$e->getMessage()}\n";
-    }
-}
-
-function displayResults(array $results): void
-{
-    if (empty($results)) {
-        echo "All properties are valid.\n";
+    if (empty($errors)) {
+        echo "\033[32mValidation passed successfully!\033[0m\n";
 
         return;
     }
 
-    echo "Validation Results:\n";
-    foreach ($results as $propertyName => $propertyResults) {
-        echo "Property: $propertyName\n";
-        foreach ($propertyResults as $result) {
-            if (null !== $result) {
-                echo "  - $result\n";
-            }
+    echo "\033[31mValidation failed:\033[0m\n";
+    foreach ($errors as $property => $propertyErrors) {
+        foreach ($propertyErrors as $error) {
+            echo "\033[31m- {$property}: {$error['message']}\033[0m\n";
         }
     }
 }
 
-function sanitizeUser(User $user): void
+// 4. Test cases function
+function runTestCases(Validator $validator): void
 {
-    $user->name = trim($user->name);
-    $user->email = strtolower($user->email);
+    // Test Case 1: Valid User
+    echo "\n\033[1mTest Case 1: Valid User\033[0m\n";
+    $validUser = new User();
+    $validUser->setName('Walmir Silva');
+    $validUser->setEmail('walmir.silva@example.com');
+    $validUser->setAge(25);
+
+    $result = $validator->validate($validUser);
+    displayValidationResults($result->getErrors());
+
+    // Test Case 2: Invalid User (Short name, invalid email, underage)
+    echo "\n\033[1mTest Case 2: Invalid User\033[0m\n";
+    $invalidUser = new User();
+    $invalidUser->setName('Wa');
+    $invalidUser->setEmail('walmir.silva.invalid');
+    $invalidUser->setAge(16);
+
+    $result = $validator->validate($invalidUser);
+    displayValidationResults($result->getErrors());
+
+    // Test Case 3: Empty User
+    echo "\n\033[1mTest Case 3: Empty User\033[0m\n";
+    $emptyUser = new User();
+
+    $result = $validator->validate($emptyUser);
+    displayValidationResults($result->getErrors());
+
+    // Test Case 4: User with Extra Whitespace
+    echo "\n\033[1mTest Case 4: User with Extra Whitespace\033[0m\n";
+    $whitespaceUser = new User();
+    $whitespaceUser->setName('  Walmir  Silva  ');
+    $whitespaceUser->setEmail('  WALMIR.SILVA@EXAMPLE.COM  ');
+    $whitespaceUser->setAge(30);
+
+    $result = $validator->validate($whitespaceUser);
+    displayValidationResults($result->getErrors());
 }
 
-function displaySanitizedUser(User $user): void
+// 5. Main application execution
+function main(): void
 {
-    echo "Sanitized User:\n";
-    echo json_encode($user) . "\n";
+    try {
+        echo "\033[1mKaririCode Validator Demo\033[0m\n";
+        echo "================================\n";
+
+        // Setup
+        $registry = setupValidatorRegistry();
+        $validator = new Validator($registry);
+
+        // Run test cases
+        runTestCases($validator);
+    } catch (Exception $e) {
+        echo "\033[31mError: {$e->getMessage()}\033[0m\n";
+        echo "\033[33mStack trace:\033[0m\n";
+        echo $e->getTraceAsString() . "\n";
+    }
 }
 
 // Run the application
-runApplication();
+main();

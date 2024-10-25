@@ -7,6 +7,8 @@ namespace KaririCode\PropertyInspector;
 use KaririCode\Contract\Processor\Attribute\CustomizableMessageAttribute;
 use KaririCode\Contract\Processor\Attribute\ProcessableAttribute;
 use KaririCode\Contract\Processor\ProcessorBuilder;
+use KaririCode\Contract\Processor\ProcessorValidator as ProcessorProcessorContract;
+use KaririCode\PropertyInspector\Contract\ProcessorConfigBuilder as ProcessorConfigBuilderContract;
 use KaririCode\PropertyInspector\Contract\PropertyAttributeHandler;
 use KaririCode\PropertyInspector\Contract\PropertyChangeApplier;
 use KaririCode\PropertyInspector\Processor\ProcessorConfigBuilder;
@@ -18,12 +20,13 @@ class AttributeHandler implements PropertyAttributeHandler, PropertyChangeApplie
     private array $processedPropertyValues = [];
     private array $processingResultErrors = [];
     private array $processingResultMessages = [];
+    private array $processorCache = [];
 
     public function __construct(
         private readonly string $processorType,
         private readonly ProcessorBuilder $builder,
-        private readonly ProcessorValidator $validator = new ProcessorValidator(),
-        private readonly ProcessorConfigBuilder $configBuilder = new ProcessorConfigBuilder()
+        private readonly ProcessorProcessorContract $validator = new ProcessorValidator(),
+        private readonly ProcessorConfigBuilderContract $configBuilder = new ProcessorConfigBuilder()
     ) {
     }
 
@@ -33,101 +36,79 @@ class AttributeHandler implements PropertyAttributeHandler, PropertyChangeApplie
             return null;
         }
 
-        $processorsConfig = $this->configBuilder->build($attribute);
-        $messages = $this->extractCustomMessages($attribute, $processorsConfig);
-
         try {
-            $processedValue = $this->processValue($value, $processorsConfig);
-            $errors = $this->validateProcessors($processorsConfig, $messages);
-
-            $this->storeProcessedPropertyValue($propertyName, $processedValue, $messages);
-
-            if (!empty($errors)) {
-                $this->storeProcessingResultErrors($propertyName, $errors);
-            }
-
-            return $processedValue;
+            return $this->processAttribute($propertyName, $attribute, $value);
         } catch (\Exception $e) {
-            $this->storeProcessingResultError($propertyName, $e->getMessage());
+            $this->processingResultErrors[$propertyName][] = $e->getMessage();
 
             return $value;
         }
+    }
+
+    private function processAttribute(string $propertyName, ProcessableAttribute $attribute, mixed $value): mixed
+    {
+        $config = $this->configBuilder->build($attribute);
+        $messages = [];
+
+        if ($attribute instanceof CustomizableMessageAttribute) {
+            foreach ($config as $processorName => &$processorConfig) {
+                if ($message = $attribute->getMessage($processorName)) {
+                    $processorConfig['customMessage'] = $message;
+                    $messages[$processorName] = $message;
+                }
+            }
+        }
+
+        $processedValue = $this->processValue($value, $config);
+
+        if ($errors = $this->validateProcessors($config, $messages)) {
+            $this->processingResultErrors[$propertyName] = $errors;
+        }
+
+        $this->processedPropertyValues[$propertyName] = [
+            'value' => $processedValue,
+            'messages' => $messages,
+        ];
+
+        $this->processingResultMessages[$propertyName] = $messages;
+
+        return $processedValue;
     }
 
     private function validateProcessors(array $processorsConfig, array $messages): array
     {
         $errors = [];
         foreach ($processorsConfig as $processorName => $config) {
-            $processor = $this->builder->build($this->processorType, $processorName, $config);
-            $validationError = $this->validator->validate(
-                $processor,
-                $processorName,
-                $messages
-            );
+            // Simplify cache key to processor name
+            if (!isset($this->processorCache[$processorName])) {
+                $this->processorCache[$processorName] = $this->builder->build(
+                    $this->processorType,
+                    $processorName,
+                    $config
+                );
+            }
 
-            if ($this->shouldAddValidationError($validationError, $errors, $processorName)) {
-                $errors[$processorName] = $validationError;
+            $processor = $this->processorCache[$processorName];
+
+            if ($error = $this->validator->validate($processor, $processorName, $messages)) {
+                $errors[$processorName] = $error;
             }
         }
 
         return $errors;
     }
 
-    private function shouldAddValidationError(?array $validationError, array $errors, string $processorName): bool
+    private function processValue(mixed $value, array $config): mixed
     {
-        return null !== $validationError && !isset($errors[$processorName]);
-    }
-
-    private function storeProcessingResultErrors(string $propertyName, array $errors): void
-    {
-        $this->processingResultErrors[$propertyName] = $errors;
-    }
-
-    private function extractCustomMessages(ProcessableAttribute $attribute, array &$processorsConfig): array
-    {
-        $messages = [];
-        if ($attribute instanceof CustomizableMessageAttribute) {
-            foreach ($processorsConfig as $processorName => &$config) {
-                $customMessage = $attribute->getMessage($processorName);
-                if (null !== $customMessage) {
-                    $config['customMessage'] = $customMessage;
-                    $messages[$processorName] = $customMessage;
-                }
-            }
-        }
-
-        return $messages;
-    }
-
-    private function processValue(mixed $value, array $processorsConfig): mixed
-    {
-        $pipeline = $this->builder->buildPipeline(
-            $this->processorType,
-            $processorsConfig
-        );
-
-        return $pipeline->process($value);
-    }
-
-    private function storeProcessedPropertyValue(string $propertyName, mixed $processedValue, array $messages): void
-    {
-        $this->processedPropertyValues[$propertyName] = [
-            'value' => $processedValue,
-            'messages' => $messages,
-        ];
-        $this->processingResultMessages[$propertyName] = $messages;
-    }
-
-    private function storeProcessingResultError(string $propertyName, string $errorMessage): void
-    {
-        $this->processingResultErrors[$propertyName][] = $errorMessage;
+        return $this->builder
+            ->buildPipeline($this->processorType, $config)
+            ->process($value);
     }
 
     public function applyChanges(object $entity): void
     {
         foreach ($this->processedPropertyValues as $propertyName => $data) {
-            $accessor = new PropertyAccessor($entity, $propertyName);
-            $accessor->setValue($data['value']);
+            (new PropertyAccessor($entity, $propertyName))->setValue($data['value']);
         }
     }
 

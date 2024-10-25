@@ -9,6 +9,8 @@ use KaririCode\PropertyInspector\Exception\PropertyInspectionException;
 
 final class AttributeAnalyzer implements AttributeAnalyzerContract
 {
+    private array $cache = [];
+
     public function __construct(private readonly string $attributeClass)
     {
     }
@@ -16,17 +18,14 @@ final class AttributeAnalyzer implements AttributeAnalyzerContract
     public function analyzeObject(object $object): array
     {
         try {
-            $results = [];
-            $reflection = new \ReflectionClass($object);
+            $className = $object::class;
 
-            foreach ($reflection->getProperties() as $property) {
-                $propertyResult = $this->analyzeProperty($object, $property);
-                if (null !== $propertyResult) {
-                    $results[$property->getName()] = $propertyResult;
-                }
+            // Usar cache se disponível
+            if (!isset($this->cache[$className])) {
+                $this->cacheObjectMetadata($object);
             }
 
-            return $results;
+            return $this->extractValues($object);
         } catch (\ReflectionException $e) {
             throw new PropertyInspectionException('Failed to analyze object: ' . $e->getMessage(), 0, $e);
         } catch (\Error $e) {
@@ -34,24 +33,49 @@ final class AttributeAnalyzer implements AttributeAnalyzerContract
         }
     }
 
-    private function analyzeProperty(object $object, \ReflectionProperty $property): ?array
+    private function cacheObjectMetadata(object $object): void
     {
-        $attributes = $property->getAttributes($this->attributeClass, \ReflectionAttribute::IS_INSTANCEOF);
-        if (empty($attributes)) {
-            return null;
+        $className = $object::class;
+        $reflection = new \ReflectionClass($object);
+        $cachedProperties = [];
+
+        foreach ($reflection->getProperties() as $property) {
+            $attributes = $property->getAttributes($this->attributeClass, \ReflectionAttribute::IS_INSTANCEOF);
+
+            if (!empty($attributes)) {
+                $property->setAccessible(true);
+                $attributeInstances = array_map(
+                    static fn (\ReflectionAttribute $attr): object => $attr->newInstance(),
+                    $attributes
+                );
+
+                $cachedProperties[$property->getName()] = [
+                    'attributes' => $attributeInstances,
+                    'property' => $property,
+                ];
+            }
         }
 
-        $property->setAccessible(true);
-        $propertyValue = $property->getValue($object);
+        $this->cache[$className] = $cachedProperties;
+    }
 
-        $attributeInstances = array_map(
-            static fn (\ReflectionAttribute $attr): object => $attr->newInstance(),
-            $attributes
-        );
+    private function extractValues(object $object): array
+    {
+        $results = [];
+        $className = $object::class;
 
-        return [
-            'value' => $propertyValue,
-            'attributes' => $attributeInstances,
-        ];
+        foreach ($this->cache[$className] as $propertyName => $data) {
+            $results[$propertyName] = [
+                'value' => $data['property']->getValue($object),
+                'attributes' => $data['attributes'],
+            ];
+        }
+
+        return $results;
+    }
+
+    public function clearCache(): void
+    {
+        $this->cache = [];
     }
 }
