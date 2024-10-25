@@ -7,8 +7,8 @@ namespace KaririCode\PropertyInspector\Tests;
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use KaririCode\PropertyInspector\AttributeAnalyzer;
-use KaririCode\PropertyInspector\Exception\PropertyInspectionException;
 use KaririCode\PropertyInspector\Contract\AttributeAnalyzer as AttributeAnalyzerContract;
+use KaririCode\PropertyInspector\Exception\PropertyInspectionException;
 
 #[\Attribute]
 class TestAttribute
@@ -20,14 +20,14 @@ class TestAttribute
 
 class TestClass
 {
-    #[TestAttribute("test1")]
-    private string $prop1 = "value1";
+    #[TestAttribute('test1')]
+    private string $prop1 = 'value1';
 
-    #[TestAttribute("test2")]
+    #[TestAttribute('test2')]
     private int $prop2 = 42;
 
-    #[TestAttribute("test3")]
-    private array $prop3 = ["test"];
+    #[TestAttribute('test3')]
+    private array $prop3 = ['test'];
 }
 
 class AttributeAnalyzerBenchmark
@@ -63,8 +63,8 @@ class AttributeAnalyzerBenchmark
 
     private function calculateDifference(float $original, float $optimized): float
     {
-        if ($original === 0.0) {
-            return $optimized === 0.0 ? 0.0 : 100.0;
+        if (0.0 === $original) {
+            return 0.0 === $optimized ? 0.0 : 100.0;
         }
 
         return (($original - $optimized) / $original) * 100;
@@ -98,7 +98,7 @@ class AttributeAnalyzerBenchmark
             'Original' => number_format($originalMemory / 1024, 2),
             'Optimized' => number_format($optimizedMemory / 1024, 2),
             'Difference' => number_format(abs($difference), 2),
-            'Improvement' => $difference > 0 ? 'Yes' : 'No'
+            'Improvement' => $difference > 0 ? 'Yes' : 'No',
         ];
     }
 
@@ -130,7 +130,7 @@ class AttributeAnalyzerBenchmark
             'Original' => number_format($originalTime * 1000, 4),
             'Optimized' => number_format($optimizedTime * 1000, 4),
             'Difference' => number_format(abs($difference), 2),
-            'Improvement' => $difference > 0 ? 'Yes' : 'No'
+            'Improvement' => $difference > 0 ? 'Yes' : 'No',
         ];
     }
 
@@ -139,21 +139,21 @@ class AttributeAnalyzerBenchmark
         $object = new TestClass();
 
         // Aquecimento
-        for ($i = 0; $i < 1000; $i++) {
+        for ($i = 0; $i < 1000; ++$i) {
             $this->originalAnalyzer->analyzeObject($object);
             $this->optimizedAnalyzer->analyzeObject($object);
         }
 
         // Original Version
         $start = microtime(true);
-        for ($i = 0; $i < self::ITERATIONS; $i++) {
+        for ($i = 0; $i < self::ITERATIONS; ++$i) {
             $this->originalAnalyzer->analyzeObject($object);
         }
         $originalTime = microtime(true) - $start;
 
         // Optimized Version
         $start = microtime(true);
-        for ($i = 0; $i < self::ITERATIONS; $i++) {
+        for ($i = 0; $i < self::ITERATIONS; ++$i) {
             $this->optimizedAnalyzer->analyzeObject($object);
         }
         $optimizedTime = microtime(true) - $start;
@@ -164,7 +164,7 @@ class AttributeAnalyzerBenchmark
             'Original' => number_format($originalTime * 1000, 4),
             'Optimized' => number_format($optimizedTime * 1000, 4),
             'Difference' => number_format(abs($difference), 2),
-            'Improvement' => $difference > 0 ? 'Yes' : 'No'
+            'Improvement' => $difference > 0 ? 'Yes' : 'No',
         ];
     }
 
@@ -178,11 +178,11 @@ class AttributeAnalyzerBenchmark
             echo str_repeat('-', 30) . "\n";
 
             foreach ($data as $metric => $value) {
-                if ($metric === 'Improvement') {
+                if ('Improvement' === $metric) {
                     continue;
                 }
 
-                $unit = $metric === 'Difference' ? '%' : ($testName === 'Memory Usage' ? ' KB' : ' ms');
+                $unit = 'Difference' === $metric ? '%' : ('Memory Usage' === $testName ? ' KB' : ' ms');
                 $color = $this->getMetricColor($metric, $data);
 
                 echo sprintf(
@@ -197,8 +197,8 @@ class AttributeAnalyzerBenchmark
 
             echo sprintf(
                 "\n%s%s%s\n\n",
-                $data['Improvement'] === 'Yes' ? self::ANSI_GREEN : self::ANSI_RED,
-                "Improvement: " . ($data['Improvement'] === 'Yes' ? 'Yes' : 'No'),
+                'Yes' === $data['Improvement'] ? self::ANSI_GREEN : self::ANSI_RED,
+                'Improvement: ' . ('Yes' === $data['Improvement'] ? 'Yes' : 'No'),
                 self::ANSI_RESET
             );
         }
@@ -208,18 +208,17 @@ class AttributeAnalyzerBenchmark
 
     private function getMetricColor(string $metric, array $data): string
     {
-        if ($metric === 'Difference') {
+        if ('Difference' === $metric) {
             return self::ANSI_YELLOW;
         }
 
-        if ($data['Improvement'] === 'Yes') {
-            return $metric === 'Optimized' ? self::ANSI_GREEN : self::ANSI_RED;
+        if ('Yes' === $data['Improvement']) {
+            return 'Optimized' === $metric ? self::ANSI_GREEN : self::ANSI_RED;
         }
 
-        return $metric === 'Original' ? self::ANSI_GREEN : self::ANSI_RED;
+        return 'Original' === $metric ? self::ANSI_GREEN : self::ANSI_RED;
     }
 }
-
 
 final class OptimizedAttributeAnalyzer implements AttributeAnalyzerContract
 {
@@ -265,7 +264,7 @@ final class OptimizedAttributeAnalyzer implements AttributeAnalyzerContract
 
                 $cachedProperties[$property->getName()] = [
                     'attributes' => $attributeInstances,
-                    'property' => $property
+                    'property' => $property,
                 ];
             }
         }
@@ -281,7 +280,7 @@ final class OptimizedAttributeAnalyzer implements AttributeAnalyzerContract
         foreach ($this->cache[$className] as $propertyName => $data) {
             $results[$propertyName] = [
                 'value' => $data['property']->getValue($object),
-                'attributes' => $data['attributes']
+                'attributes' => $data['attributes'],
             ];
         }
 
@@ -343,8 +342,6 @@ final class OptimizedAttributeAnalyzer implements AttributeAnalyzerContract
 //         ];
 //     }
 // }
-
-
 
 // Executar o benchmark
 $benchmark = new AttributeAnalyzerBenchmark();
