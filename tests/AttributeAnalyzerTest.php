@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace KaririCode\PropertyInspector\Tests;
 
-use Attribute;
 use KaririCode\PropertyInspector\AttributeAnalyzer;
 use KaririCode\PropertyInspector\Contract\AttributeAnalyzer as AttributeAnalyzerContract;
 use KaririCode\PropertyInspector\Exception\PropertyInspectionException;
@@ -63,60 +62,63 @@ final class AttributeAnalyzerTest extends TestCase
 
     public function testReflectionExceptionThrownDuringAnalyzeObject(): void
     {
-        // Define a fake attribute class for testing
         $attributeClass = 'FakeAttributeClass';
-
-        // Create the AttributeAnalyzer with the fake attribute class
         $analyzer = new AttributeAnalyzer($attributeClass);
-
-        // Simulate an object that will trigger a ReflectionException
         $object = new class {
             private $inaccessibleProperty;
 
             public function __construct()
             {
-                // Simulating an inaccessible property that will cause ReflectionException
                 $this->inaccessibleProperty = null;
             }
         };
 
-        // We expect a PropertyInspectionException due to ReflectionException
         $this->expectException(PropertyInspectionException::class);
+        $this->expectExceptionCode(2503); // CODE_GENERAL_ANALYSIS_ERROR
         $this->expectExceptionMessage('An error occurred during object analysis: Class "FakeAttributeClass" not found');
 
-        // Execute the analyzeObject method, which should trigger the exception
         $analyzer->analyzeObject($object);
     }
 
     public function testErrorThrownDuringAnalyzeProperty(): void
     {
-        // Define a fake attribute class for testing
         $attributeClass = 'FakeAttributeClass';
-
-        // Create the AttributeAnalyzer with the fake attribute class
         $analyzer = new AttributeAnalyzer($attributeClass);
-
-        // Simulate an object that will trigger an Error during property analysis
         $object = new class {
             private $errorProperty;
 
             public function __construct()
             {
-                // Simulating an error in the property that will cause an Error during reflection
                 $this->errorProperty = null;
             }
         };
 
-        // Mock Reflection to throw an error during attribute analysis
-        $reflectionPropertyMock = $this->createMock(\ReflectionProperty::class);
-        $reflectionPropertyMock->method('getAttributes')
-            ->willThrowException(new \Error('Simulated Error'));
-
-        // We expect a PropertyInspectionException due to the Error
         $this->expectException(PropertyInspectionException::class);
+        $this->expectExceptionCode(2503); // CODE_GENERAL_ANALYSIS_ERROR
         $this->expectExceptionMessage('An error occurred during object analysis: Class "FakeAttributeClass" not found');
 
-        // Execute the analyzeObject method, which should trigger the exception
         $analyzer->analyzeObject($object);
+    }
+
+    public function testClearCacheInvocation(): void
+    {
+        $object = new class {
+            #[TestAttribute]
+            public string $testProperty = 'test value';
+        };
+
+        $this->analyzer->analyzeObject($object);
+
+        $reflection = new \ReflectionClass(AttributeAnalyzer::class);
+        $cacheProperty = $reflection->getProperty('cache');
+        $cacheProperty->setAccessible(true);
+
+        $this->assertNotEmpty($cacheProperty->getValue($this->analyzer));
+        $this->analyzer->clearCache();
+
+        $this->assertEmpty($cacheProperty->getValue($this->analyzer));
+
+        $result = $this->analyzer->analyzeObject($object);
+        $this->assertNotEmpty($result);
     }
 }

@@ -10,71 +10,31 @@ use KaririCode\PropertyInspector\Exception\PropertyInspectionException;
 use KaririCode\PropertyInspector\Utility\PropertyInspector;
 use PHPUnit\Framework\TestCase;
 
-class ReflectionExceptionTest extends TestCase
+final class ReflectionExceptionTest extends TestCase
 {
     public function testReflectionExceptionThrownDuringInspection(): void
     {
         $attributeAnalyzer = $this->createMock(AttributeAnalyzerInterface::class);
         $handler = $this->createMock(PropertyAttributeHandler::class);
         $inspector = new PropertyInspector($attributeAnalyzer);
-
         $object = new \stdClass();
 
+        $reflectionException = new \ReflectionException('Simulated ReflectionException');
         $attributeAnalyzer->method('analyzeObject')
-            ->willThrowException(new \ReflectionException('Simulated ReflectionException'));
+            ->willThrowException($reflectionException);
 
-        $this->expectException(PropertyInspectionException::class);
-        $this->expectExceptionMessage('Failed to analyze object: Simulated ReflectionException');
-
-        $inspector->inspect($object, $handler);
-    }
-
-    public function testReflectionExceptionThrownDuringAnalyzeObject(): void
-    {
-        $attributeAnalyzer = $this->createMock(AttributeAnalyzerInterface::class);
-        $object = new \stdClass();
-
-        $attributeAnalyzer->method('analyzeObject')
-            ->willThrowException(new PropertyInspectionException('Failed to analyze property: Class "FakeAttributeClass" not found'));
-
-        $this->expectException(PropertyInspectionException::class);
-        $this->expectExceptionMessage('Failed to analyze property: Class "FakeAttributeClass" not found');
-
-        $attributeAnalyzer->analyzeObject($object);
-    }
-
-    public function testReflectionExceptionInAnalyzeObject(): void
-    {
-        $attributeAnalyzer = $this->createMock(AttributeAnalyzerInterface::class);
-        $object = new \stdClass();
-
-        $attributeAnalyzer->method('analyzeObject')
-            ->willThrowException(new \ReflectionException('Test ReflectionException'));
-
-        $inspector = new PropertyInspector($attributeAnalyzer);
-        $handler = $this->createMock(PropertyAttributeHandler::class);
-
-        $this->expectException(PropertyInspectionException::class);
-        $this->expectExceptionMessage('Failed to analyze object: Test ReflectionException');
-
-        $inspector->inspect($object, $handler);
-    }
-
-    public function testErrorInAnalyzeObject(): void
-    {
-        $attributeAnalyzer = $this->createMock(AttributeAnalyzerInterface::class);
-        $object = new \stdClass();
-
-        $attributeAnalyzer->method('analyzeObject')
-            ->willThrowException(new \Error('Test Error'));
-
-        $inspector = new PropertyInspector($attributeAnalyzer);
-        $handler = $this->createMock(PropertyAttributeHandler::class);
-
-        $this->expectException(PropertyInspectionException::class);
-        $this->expectExceptionMessage('An error occurred during object analysis: Test Error');
-
-        $inspector->inspect($object, $handler);
+        try {
+            $inspector->inspect($object, $handler);
+            $this->fail('Expected PropertyInspectionException was not thrown');
+        } catch (PropertyInspectionException $e) {
+            $this->assertSame(2502, $e->getCode());
+            $this->assertSame('REFLECTION_INSPECTION_ERROR', $e->getErrorCode());
+            $this->assertSame(
+                'Failed to inspect object using reflection: Simulated ReflectionException',
+                $e->getMessage()
+            );
+            $this->assertSame($reflectionException, $e->getPrevious());
+        }
     }
 
     public function testErrorThrownDuringInspection(): void
@@ -82,15 +42,48 @@ class ReflectionExceptionTest extends TestCase
         $attributeAnalyzer = $this->createMock(AttributeAnalyzerInterface::class);
         $handler = $this->createMock(PropertyAttributeHandler::class);
         $inspector = new PropertyInspector($attributeAnalyzer);
-
         $object = new \stdClass();
 
+        $error = new \Error('Simulated Error');
         $attributeAnalyzer->method('analyzeObject')
-            ->willThrowException(new \Error('Simulated Error'));
+            ->willThrowException($error);
 
-        $this->expectException(PropertyInspectionException::class);
-        $this->expectExceptionMessage('An error occurred during object analysis: Simulated Error');
+        try {
+            $inspector->inspect($object, $handler);
+            $this->fail('Expected PropertyInspectionException was not thrown');
+        } catch (PropertyInspectionException $e) {
+            $this->assertSame(2505, $e->getCode());
+            $this->assertSame('CRITICAL_INSPECTION_ERROR', $e->getErrorCode());
+            $this->assertSame(
+                'A critical error occurred during object inspection: Simulated Error',
+                $e->getMessage()
+            );
+            $this->assertSame($error, $e->getPrevious());
+        }
+    }
 
-        $inspector->inspect($object, $handler);
+    public function testGeneralExceptionThrownDuringInspection(): void
+    {
+        $attributeAnalyzer = $this->createMock(AttributeAnalyzerInterface::class);
+        $handler = $this->createMock(PropertyAttributeHandler::class);
+        $inspector = new PropertyInspector($attributeAnalyzer);
+        $object = new \stdClass();
+
+        $exception = new \Exception('General Exception');
+        $attributeAnalyzer->method('analyzeObject')
+            ->willThrowException($exception);
+
+        try {
+            $inspector->inspect($object, $handler);
+            $this->fail('Expected PropertyInspectionException was not thrown');
+        } catch (PropertyInspectionException $e) {
+            $this->assertSame(2504, $e->getCode());
+            $this->assertSame('GENERAL_INSPECTION_ERROR', $e->getErrorCode());
+            $this->assertSame(
+                'An exception occurred during object inspection: General Exception',
+                $e->getMessage()
+            );
+            $this->assertSame($exception, $e->getPrevious());
+        }
     }
 }

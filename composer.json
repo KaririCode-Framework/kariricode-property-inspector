@@ -26,7 +26,8 @@
   ],
   "require": {
     "php": "^8.3",
-    "kariricode/contract": "^2.7"
+    "kariricode/contract": "^2.7",
+    "kariricode/exception": "^1.2"
   },
   "autoload": {
     "psr-4": {

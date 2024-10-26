@@ -27,11 +27,11 @@ final class PropertyInspector implements PropertyInspectorContract
 
             return $handler;
         } catch (\ReflectionException $e) {
-            throw new PropertyInspectionException('Failed to analyze object: ' . $e->getMessage(), 0, $e);
+            throw PropertyInspectionException::failedToInspectObjectReflection($e);
         } catch (\Exception $e) {
-            throw new PropertyInspectionException('An exception occurred during object analysis: ' . $e->getMessage(), 0, $e);
+            throw PropertyInspectionException::failedToInspectObjectException($e);
         } catch (\Error $e) {
-            throw new PropertyInspectionException('An error occurred during object analysis: ' . $e->getMessage(), 0, $e);
+            throw PropertyInspectionException::failedToInspectObjectError($e);
         }
     }
 }
