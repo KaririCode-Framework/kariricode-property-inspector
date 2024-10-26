@@ -69,14 +69,23 @@ final class PropertyInspectorTest extends TestCase
         $object = new \stdClass();
         $mockHandler = $this->createMock(PropertyAttributeHandler::class);
 
+        $reflectionException = new \ReflectionException('Test exception');
         $this->analyzer->expects($this->once())
             ->method('analyzeObject')
-            ->willThrowException(new \ReflectionException('Test exception'));
+            ->willThrowException($reflectionException);
 
-        $this->expectException(PropertyInspectionException::class);
-        $this->expectExceptionMessage('Failed to analyze object: Test exception');
-
-        $this->inspector->inspect($object, $mockHandler);
+        try {
+            $this->inspector->inspect($object, $mockHandler);
+            $this->fail('Expected PropertyInspectionException was not thrown');
+        } catch (PropertyInspectionException $e) {
+            $this->assertSame(2502, $e->getCode());
+            $this->assertSame('REFLECTION_INSPECTION_ERROR', $e->getErrorCode());
+            $this->assertSame(
+                'Failed to inspect object using reflection: Test exception',
+                $e->getMessage()
+            );
+            $this->assertSame($reflectionException, $e->getPrevious());
+        }
     }
 
     public function testInspectWithMultipleAttributes(): void
@@ -107,14 +116,23 @@ final class PropertyInspectorTest extends TestCase
         $object = new \stdClass();
         $mockHandler = $this->createMock(PropertyAttributeHandler::class);
 
+        $exception = new \Exception('General exception');
         $this->analyzer->expects($this->once())
             ->method('analyzeObject')
-            ->willThrowException(new \Exception('General exception'));
+            ->willThrowException($exception);
 
-        $this->expectException(PropertyInspectionException::class);
-        $this->expectExceptionMessage('An exception occurred during object analysis: General exception');
-
-        $this->inspector->inspect($object, $mockHandler);
+        try {
+            $this->inspector->inspect($object, $mockHandler);
+            $this->fail('Expected PropertyInspectionException was not thrown');
+        } catch (PropertyInspectionException $e) {
+            $this->assertSame(2504, $e->getCode());
+            $this->assertSame('GENERAL_INSPECTION_ERROR', $e->getErrorCode());
+            $this->assertSame(
+                'An exception occurred during object inspection: General exception',
+                $e->getMessage()
+            );
+            $this->assertSame($exception, $e->getPrevious());
+        }
     }
 
     public function testInspectWithError(): void
@@ -122,13 +140,97 @@ final class PropertyInspectorTest extends TestCase
         $object = new \stdClass();
         $mockHandler = $this->createMock(PropertyAttributeHandler::class);
 
+        $error = new \Error('Fatal error');
         $this->analyzer->expects($this->once())
             ->method('analyzeObject')
-            ->willThrowException(new \Error('Fatal error'));
+            ->willThrowException($error);
 
-        $this->expectException(PropertyInspectionException::class);
-        $this->expectExceptionMessage('An error occurred during object analysis: Fatal error');
+        try {
+            $this->inspector->inspect($object, $mockHandler);
+            $this->fail('Expected PropertyInspectionException was not thrown');
+        } catch (PropertyInspectionException $e) {
+            $this->assertSame(2505, $e->getCode());
+            $this->assertSame('CRITICAL_INSPECTION_ERROR', $e->getErrorCode());
+            $this->assertSame(
+                'A critical error occurred during object inspection: Fatal error',
+                $e->getMessage()
+            );
+            $this->assertSame($error, $e->getPrevious());
+        }
+    }
 
-        $this->inspector->inspect($object, $mockHandler);
+    public function testFailedToAnalyzeObjectReflection(): void
+    {
+        $originalException = new \ReflectionException('Class does not exist');
+        $exception = PropertyInspectionException::failedToAnalyzeObjectReflection($originalException);
+
+        $this->assertInstanceOf(PropertyInspectionException::class, $exception);
+        $this->assertSame(2501, $exception->getCode());
+        $this->assertSame('REFLECTION_ANALYSIS_ERROR', $exception->getErrorCode());
+        $this->assertSame(
+            'Failed to analyze object using reflection: Class does not exist',
+            $exception->getMessage()
+        );
+        $this->assertSame($originalException, $exception->getPrevious());
+    }
+
+    public function testFailedToAnalyzeObjectError(): void
+    {
+        $originalError = new \Error('Type error occurred');
+        $exception = PropertyInspectionException::failedToAnalyzeObjectError($originalError);
+
+        $this->assertInstanceOf(PropertyInspectionException::class, $exception);
+        $this->assertSame(2503, $exception->getCode());
+        $this->assertSame('GENERAL_ANALYSIS_ERROR', $exception->getErrorCode());
+        $this->assertSame(
+            'An error occurred during object analysis: Type error occurred',
+            $exception->getMessage()
+        );
+        $this->assertSame($originalError, $exception->getPrevious());
+    }
+
+    public function testFailedToInspectObjectReflection(): void
+    {
+        $originalException = new \ReflectionException('Property not accessible');
+        $exception = PropertyInspectionException::failedToInspectObjectReflection($originalException);
+
+        $this->assertInstanceOf(PropertyInspectionException::class, $exception);
+        $this->assertSame(2502, $exception->getCode());
+        $this->assertSame('REFLECTION_INSPECTION_ERROR', $exception->getErrorCode());
+        $this->assertSame(
+            'Failed to inspect object using reflection: Property not accessible',
+            $exception->getMessage()
+        );
+        $this->assertSame($originalException, $exception->getPrevious());
+    }
+
+    public function testFailedToInspectObjectException(): void
+    {
+        $originalException = new \Exception('Generic error');
+        $exception = PropertyInspectionException::failedToInspectObjectException($originalException);
+
+        $this->assertInstanceOf(PropertyInspectionException::class, $exception);
+        $this->assertSame(2504, $exception->getCode());
+        $this->assertSame('GENERAL_INSPECTION_ERROR', $exception->getErrorCode());
+        $this->assertSame(
+            'An exception occurred during object inspection: Generic error',
+            $exception->getMessage()
+        );
+        $this->assertSame($originalException, $exception->getPrevious());
+    }
+
+    public function testFailedToInspectObjectError(): void
+    {
+        $originalError = new \Error('Fatal error occurred');
+        $exception = PropertyInspectionException::failedToInspectObjectError($originalError);
+
+        $this->assertInstanceOf(PropertyInspectionException::class, $exception);
+        $this->assertSame(2505, $exception->getCode());
+        $this->assertSame('CRITICAL_INSPECTION_ERROR', $exception->getErrorCode());
+        $this->assertSame(
+            'A critical error occurred during object inspection: Fatal error occurred',
+            $exception->getMessage()
+        );
+        $this->assertSame($originalError, $exception->getPrevious());
     }
 }

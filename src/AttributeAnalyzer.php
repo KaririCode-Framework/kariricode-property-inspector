@@ -20,16 +20,15 @@ final class AttributeAnalyzer implements AttributeAnalyzerContract
         try {
             $className = $object::class;
 
-            // Usar cache se disponível
             if (!isset($this->cache[$className])) {
                 $this->cacheObjectMetadata($object);
             }
 
             return $this->extractValues($object);
         } catch (\ReflectionException $e) {
-            throw new PropertyInspectionException('Failed to analyze object: ' . $e->getMessage(), 0, $e);
+            throw PropertyInspectionException::failedToAnalyzeObjectReflection($e);
         } catch (\Error $e) {
-            throw new PropertyInspectionException('An error occurred during object analysis: ' . $e->getMessage(), 0, $e);
+            throw PropertyInspectionException::failedToAnalyzeObjectError($e);
         }
     }
 
