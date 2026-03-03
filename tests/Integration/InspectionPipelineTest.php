@@ -7,14 +7,12 @@ namespace KaririCode\PropertyInspector\Tests\Integration;
 use KaririCode\PropertyInspector\AttributeAnalyzer;
 use KaririCode\PropertyInspector\Contract\PropertyAttributeHandler;
 use KaririCode\PropertyInspector\Contract\PropertyChangeApplier;
-use KaririCode\PropertyInspector\Exception\PropertyInspectionException;
 use KaririCode\PropertyInspector\Tests\Fixture\Attribute\Sanitize;
 use KaririCode\PropertyInspector\Tests\Fixture\Attribute\Validate;
 use KaririCode\PropertyInspector\Tests\Fixture\UserFixture;
 use KaririCode\PropertyInspector\Utility\PropertyAccessor;
 use KaririCode\PropertyInspector\Utility\PropertyInspector;
 use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -28,7 +26,6 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(AttributeAnalyzer::class)]
 #[CoversClass(PropertyInspector::class)]
 #[CoversClass(PropertyAccessor::class)]
-#[UsesClass(PropertyInspectionException::class)]
 final class InspectionPipelineTest extends TestCase
 {
     // ── Full pipeline: inspect → collect → apply ─────────────────────
