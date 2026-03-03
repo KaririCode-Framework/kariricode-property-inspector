@@ -16,7 +16,7 @@ interface PropertyInspector
      *
      * @throws PropertyInspectionException If there's an error inspecting the object
      *
-     * @return PropertyAttributeHandler The inspection results
+     * @return PropertyAttributeHandler The handler populated with inspection results
      */
     public function inspect(object $object, PropertyAttributeHandler $handler): PropertyAttributeHandler;
 }

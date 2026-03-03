@@ -4,44 +4,29 @@ declare(strict_types=1);
 
 namespace KaririCode\PropertyInspector\Utility;
 
+/**
+ * Provides read/write access to object properties via reflection,
+ * regardless of visibility (public, protected, private).
+ *
+ * Since PHP 8.1, ReflectionProperty::setAccessible() is a no-op —
+ * all properties are accessible via reflection without explicit calls.
+ */
 readonly class PropertyAccessor
 {
     private \ReflectionProperty $reflectionProperty;
-    private bool $wasAccessible;
 
     public function __construct(private object $object, string $propertyName)
     {
         $this->reflectionProperty = new \ReflectionProperty($this->object, $propertyName);
-        $this->wasAccessible = $this->reflectionProperty->isPublic();
     }
 
     public function getValue(): mixed
     {
-        $this->makeAccessible();
-        $value = $this->reflectionProperty->getValue($this->object);
-        $this->restoreAccessibility();
-
-        return $value;
+        return $this->reflectionProperty->getValue($this->object);
     }
 
     public function setValue(mixed $value): void
     {
-        $this->makeAccessible();
         $this->reflectionProperty->setValue($this->object, $value);
-        $this->restoreAccessibility();
-    }
-
-    private function makeAccessible(): void
-    {
-        if (!$this->wasAccessible) {
-            $this->reflectionProperty->setAccessible(true);
-        }
-    }
-
-    private function restoreAccessibility(): void
-    {
-        if (!$this->wasAccessible) {
-            $this->reflectionProperty->setAccessible(false);
-        }
     }
 }

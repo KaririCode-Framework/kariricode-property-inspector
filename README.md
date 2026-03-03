@@ -1,213 +1,370 @@
-# KaririCode Framework: PropertyInspector Component
+# KaririCode PropertyInspector
 
-[![en](https://img.shields.io/badge/lang-en-red.svg)](README.md) [![pt-br](https://img.shields.io/badge/lang-pt--br-green.svg)](README.pt-br.md)
+<div align="center">
 
-![PHP](https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![PHPUnit](https://img.shields.io/badge/PHPUnit-3776AB?style=for-the-badge&logo=php&logoColor=white)
+[![PHP 8.4+](https://img.shields.io/badge/PHP-8.4%2B-777BB4?logo=php&logoColor=white)](https://www.php.net/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-22c55e.svg)](LICENSE)
+[![PHPStan Level 9](https://img.shields.io/badge/PHPStan-Level%209-4F46E5)](https://phpstan.org/)
+[![Tests](https://img.shields.io/badge/Tests-40%20passing-22c55e)](https://kariricode.org)
+[![ARFA](https://img.shields.io/badge/ARFA-1.3-orange)](https://kariricode.org)
+[![KaririCode Framework](https://img.shields.io/badge/KaririCode-Framework-orange)](https://kariricode.org)
 
-A powerful and flexible component for inspecting and processing object properties based on custom attributes in the KaririCode Framework, providing advanced features for property validation, sanitization, and analysis in PHP applications.
+**Attribute-based property analysis and inspection for the KaririCode Framework —  
+multi-pass pipelines, reflection caching, and zero-overhead property mutation, PHP 8.4+.**
 
-## Table of Contents
+[Installation](#installation) · [Quick Start](#quick-start) · [Features](#features) · [Pipeline](#the-inspection-pipeline) · [Architecture](#architecture)
 
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-  - [Basic Usage](#basic-usage)
-  - [Advanced Usage](#advanced-usage)
-- [Integration with Other KaririCode Components](#integration-with-other-kariricode-components)
-- [Development and Testing](#development-and-testing)
-- [License](#license)
-- [Support and Community](#support-and-community)
-- [Acknowledgements](#acknowledgements)
+</div>
 
-## Features
+---
 
-- Easy inspection and processing of object properties based on custom attributes
-- Support for both validation and sanitization of property values
-- Flexible attribute handling through custom attribute handlers
-- Seamless integration with other KaririCode components (Serializer, Validator, Normalizer)
-- Extensible architecture allowing custom attributes and handlers
-- Built on top of the KaririCode\Contract interfaces for maximum flexibility
+## The Problem
+
+PHP reflection is boilerplate-heavy, error-prone, and slow when repeated across object graphs:
+
+```php
+// The old way: raw reflection on every request
+$ref = new ReflectionClass($user);
+foreach ($ref->getProperties() as $prop) {
+    $attrs = $prop->getAttributes(Validate::class);
+    foreach ($attrs as $attr) {
+        $prop->setAccessible(true); // deprecated in PHP 8.4
+        $value = $prop->getValue($user);
+        // now what? where does the result go? how do you write it back?
+    }
+}
+```
+
+No caching, no mutation abstraction, no error isolation, no handler contract — just raw loops you repeat in every project.
+
+## The Solution
+
+```php
+use KaririCode\PropertyInspector\AttributeAnalyzer;
+use KaririCode\PropertyInspector\Utility\PropertyInspector;
+use KaririCode\PropertyInspector\Utility\PropertyAccessor;
+
+// 1. Configure which attribute to scan for
+$analyzer  = new AttributeAnalyzer(Validate::class);
+$inspector = new PropertyInspector($analyzer);
+
+// 2. Inspect — results cached after first call per class
+$handler = new MyValidationHandler();
+$inspector->inspect($user, $handler);
+
+// 3. Read processed values and errors
+$values = $handler->getProcessedPropertyValues();
+$errors = $handler->getProcessingResultErrors();
+
+// 4. Write back changed values via PropertyAccessor
+$accessor = new PropertyAccessor($user, 'email');
+$accessor->setValue(strtolower($accessor->getValue()));
+```
+
+---
+
+## Requirements
+
+| Requirement | Version |
+|---|---|
+| PHP | 8.4 or higher |
+| kariricode/contract | ^2.8 |
+| kariricode/exception | ^1.2 |
+
+---
 
 ## Installation
-
-The PropertyInspector component can be easily installed via Composer, which is the recommended dependency manager for PHP projects.
-
-To install the PropertyInspector component in your project, run the following command in your terminal:
 
 ```bash
 composer require kariricode/property-inspector
 ```
 
-This command will automatically add PropertyInspector to your project and install all necessary dependencies.
+---
 
-### Requirements
+## Quick Start
 
-- PHP 8.1 or higher
-- Composer
-
-### Manual Installation
-
-If you prefer not to use Composer, you can download the source code directly from the [GitHub repository](https://github.com/KaririCode-Framework/kariricode-property-inspector) and include it manually in your project. However, we strongly recommend using Composer for easier dependency management and updates.
-
-After installation, you can start using PropertyInspector in your PHP project immediately. Make sure to include the Composer autoloader in your script:
+Define an attribute, an entity, a handler — and inspect:
 
 ```php
-require_once 'vendor/autoload.php';
-```
+<?php
 
-## Usage
+declare(strict_types=1);
 
-### Basic Usage
+require_once __DIR__ . '/vendor/autoload.php';
 
-1. Define your custom attributes and entity:
-
-```php
 use Attribute;
+use KaririCode\PropertyInspector\AttributeAnalyzer;
+use KaririCode\PropertyInspector\Contract\PropertyAttributeHandler;
+use KaririCode\PropertyInspector\Utility\PropertyInspector;
 
+// 1. Define a custom attribute
 #[Attribute(Attribute::TARGET_PROPERTY)]
-class Validate
+final class Validate
 {
-    public function __construct(public readonly array $rules) {}
+    public function __construct(public readonly array $rules = []) {}
 }
 
-#[Attribute(Attribute::TARGET_PROPERTY)]
-class Sanitize
-{
-    public function __construct(public readonly string $method) {}
-}
-
-class User
+// 2. Define an entity with annotated properties
+final class User
 {
     public function __construct(
-        #[Validate(['required', 'string', 'min:3'])]
-        #[Sanitize('trim')]
-        public string $name,
+        #[Validate(['required', 'min:3'])]
+        public string $name = '',
+
         #[Validate(['required', 'email'])]
-        #[Sanitize('lowercase')]
-        public string $email,
-        #[Validate(['required', 'integer', 'min:18'])]
-        public int $age
+        public string $email = '',
+
+        #[Validate(['required', 'min:18'])]
+        public int $age = 0,
     ) {}
 }
-```
 
-2. Create a custom attribute handler:
-
-```php
-use KaririCode\PropertyInspector\Contract\PropertyAttributeHandler;
-
-class CustomAttributeHandler implements PropertyAttributeHandler
+// 3. Implement a handler
+final class ValidationHandler implements PropertyAttributeHandler
 {
-    public function handleAttribute(object $object, string $propertyName, object $attribute, mixed $value): ?string
+    private array $processed = [];
+    private array $errors    = [];
+
+    public function handleAttribute(string $propertyName, object $attribute, mixed $value): mixed
     {
+        $this->processed[$propertyName] = $value;
+
         if ($attribute instanceof Validate) {
-            return $this->validate($propertyName, $value, $attribute->rules);
+            foreach ($attribute->rules as $rule) {
+                if ($rule === 'required' && ($value === '' || $value === null)) {
+                    $this->errors[$propertyName]['required'] = 'Field is required';
+                }
+                if (str_starts_with($rule, 'min:')) {
+                    $min = (int) substr($rule, 4);
+                    if (is_string($value) && strlen($value) < $min) {
+                        $this->errors[$propertyName]['min'] = "Min {$min} chars required";
+                    }
+                    if (is_int($value) && $value < $min) {
+                        $this->errors[$propertyName]['min'] = "Must be at least {$min}";
+                    }
+                }
+            }
         }
-        if ($attribute instanceof Sanitize) {
-            return $this->sanitize($value, $attribute->method);
-        }
-        return null;
+
+        return $value;
     }
 
-    // Implement validate and sanitize methods...
+    public function getProcessedPropertyValues(): array { return $this->processed; }
+    public function getProcessingResultMessages(): array { return []; }
+    public function getProcessingResultErrors(): array   { return $this->errors; }
 }
+
+// 4. Run the pipeline
+$user      = new User(name: 'Walmir', email: 'walmir@kariricode.org', age: 30);
+$analyzer  = new AttributeAnalyzer(Validate::class);
+$inspector = new PropertyInspector($analyzer);
+$handler   = new ValidationHandler();
+
+$inspector->inspect($user, $handler);
+
+var_dump($handler->getProcessedPropertyValues());
+// ['name' => 'Walmir', 'email' => 'walmir@kariricode.org', 'age' => 30]
+
+var_dump($handler->getProcessingResultErrors());
+// [] — all good
 ```
-
-3. Use the PropertyInspector:
-
-```php
-use KaririCode\PropertyInspector\AttributeAnalyzer;
-use KaririCode\PropertyInspector\PropertyInspector;
-
-$attributeAnalyzer = new AttributeAnalyzer(Validate::class);
-$propertyInspector = new PropertyInspector($attributeAnalyzer);
-$handler = new CustomAttributeHandler();
-
-$user = new User('Walmir Silva', 'walmir@example.com', 25);
-
-$results = $propertyInspector->inspect($user, $handler);
-```
-
-### Advanced Usage
-
-You can create more complex validation and sanitization rules, and even combine the PropertyInspector with other components like the ProcessorPipeline for more advanced processing flows.
-
-## Integration with Other KaririCode Components
-
-The PropertyInspector component is designed to work seamlessly with other KaririCode components:
-
-- **KaririCode\Serializer**: Use PropertyInspector to validate and sanitize data before serialization.
-- **KaririCode\Validator**: Integrate custom validation logic with PropertyInspector attributes.
-- **KaririCode\Normalizer**: Use PropertyInspector to normalize object properties based on attributes.
-
-## Development and Testing
-
-For development and testing purposes, this package uses Docker and Docker Compose to ensure consistency across different environments. A Makefile is provided for convenience.
-
-### Prerequisites
-
-- Docker
-- Docker Compose
-- Make (optional, but recommended for easier command execution)
-
-### Development Setup
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/KaririCode-Framework/kariricode-property-inspector.git
-   cd kariricode-property-inspector
-   ```
-
-2. Set up the environment:
-
-   ```bash
-   make setup-env
-   ```
-
-3. Start the Docker containers:
-
-   ```bash
-   make up
-   ```
-
-4. Install dependencies:
-   ```bash
-   make composer-install
-   ```
-
-### Available Make Commands
-
-- `make up`: Start all services in the background
-- `make down`: Stop and remove all containers
-- `make build`: Build Docker images
-- `make shell`: Access the PHP container shell
-- `make test`: Run tests
-- `make coverage`: Run test coverage with visual formatting
-- `make cs-fix`: Run PHP CS Fixer to fix code style
-- `make quality`: Run all quality commands (cs-check, test, security-check)
-
-For a full list of available commands, run:
-
-```bash
-make help
-```
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support and Community
-
-- **Documentation**: [https://kariricode.org/docs/property-inspector](https://kariricode.org/docs/property-inspector)
-- **Issue Tracker**: [GitHub Issues](https://github.com/KaririCode-Framework/kariricode-property-inspector/issues)
-- **Community**: [KaririCode Club Community](https://kariricode.club)
-
-## Acknowledgements
-
-- The KaririCode Framework team and contributors.
-- Inspired by attribute-based programming and reflection patterns in modern PHP applications.
 
 ---
 
-Built with ❤️ by the KaririCode team. Empowering developers to create more robust and flexible PHP applications.
+## Features
+
+### Reflection Caching
+
+`AttributeAnalyzer` caches reflection metadata after the first analysis per class. Subsequent calls for the same class — even with different object instances — skip `ReflectionClass` entirely:
+
+```php
+$analyzer = new AttributeAnalyzer(Validate::class);
+$inspector = new PropertyInspector($analyzer);
+
+// First call: reflection + cache build
+$inspector->inspect($user1, $handler1);
+
+// Subsequent calls: metadata from cache — zero reflection overhead
+$inspector->inspect($user2, $handler2);
+$inspector->inspect($user3, $handler3);
+
+// Force re-analysis when needed (e.g., after metadata change)
+$analyzer->clearCache();
+```
+
+### Multi-Pass Inspection
+
+Run multiple independent passes over the same object with different attribute types:
+
+```php
+// Pass 1: sanitize
+$sanitizeInspector = new PropertyInspector(new AttributeAnalyzer(Sanitize::class));
+$sanitizeHandler   = new TrimLowercaseHandler();
+$sanitizeInspector->inspect($user, $sanitizeHandler);
+
+// Apply sanitized values back to the object
+foreach ($sanitizeHandler->getProcessedPropertyValues() as $prop => $value) {
+    (new PropertyAccessor($user, $prop))->setValue($value);
+}
+
+// Pass 2: validate on sanitized data
+$validateInspector = new PropertyInspector(new AttributeAnalyzer(Validate::class));
+$validateHandler   = new ValidationHandler();
+$validateInspector->inspect($user, $validateHandler);
+
+$errors = $validateHandler->getProcessingResultErrors(); // [] if clean
+```
+
+### PropertyAccessor — Safe Property Mutation
+
+Read and write any property (public, protected, private) without `setAccessible` boilerplate:
+
+```php
+use KaririCode\PropertyInspector\Utility\PropertyAccessor;
+
+$accessor = new PropertyAccessor($user, 'email');
+
+$current = $accessor->getValue();           // read
+$accessor->setValue(strtolower($current));  // write (no setAccessible needed)
+```
+
+### Attribute Polymorphism
+
+`AttributeAnalyzer` uses `ReflectionAttribute::IS_INSTANCEOF` — it matches **attribute hierarchies**, not just exact class names:
+
+```php
+// Matches Validate + any subclass of Validate
+$analyzer = new AttributeAnalyzer(Validate::class);
+```
+
+### Isolated Error Handling
+
+All exceptions from reflection or handler code are wrapped in `PropertyInspectionException` — your calling code only needs to catch one type:
+
+```php
+use KaririCode\PropertyInspector\Exception\PropertyInspectionException;
+
+try {
+    $inspector->inspect($user, $handler);
+} catch (PropertyInspectionException $e) {
+    // ReflectionException, TypeError, Error — all caught and re-wrapped
+}
+```
+
+---
+
+## The Inspection Pipeline
+
+```
+$inspector->inspect($object, $handler)
+        │
+        ▼
+AttributeAnalyzer::analyzeObject($object)
+  ├── Check class cache
+  ├── If miss: ReflectionClass → getProperties()
+  │       └── foreach property:
+  │               getAttributes($attributeClass, IS_INSTANCEOF)
+  │               newInstance() → cache [{attributes, property}]
+  └── extractValues($object): [{value, attributes}]
+        │
+        ▼
+foreach property → foreach attribute:
+    $handler->handleAttribute($propertyName, $attribute, $value)
+        │
+        ▼
+return $handler  (accumulates processed values + errors)
+```
+
+---
+
+## Architecture
+
+### Source layout
+
+```
+src/
+├── AttributeAnalyzer.php      Core analyzer — reflection + cache + attribute extraction
+├── Contract/
+│   ├── AttributeAnalyzer.php       Interface: analyzeObject · clearCache
+│   ├── PropertyAttributeHandler.php Interface: handleAttribute · getProcessed* · getErrors
+│   ├── PropertyChangeApplier.php   Interface: applyChanges
+│   └── PropertyInspector.php       Interface: inspect
+├── Exception/
+│   └── PropertyInspectionException.php  Named factory methods per failure mode
+└── Utility/
+    ├── PropertyAccessor.php   Safe property read/write (private, protected, public)
+    └── PropertyInspector.php  Orchestrator: delegates analysis → handler
+```
+
+### Key design decisions
+
+| Decision | Rationale | ADR |
+|---|---|---|
+| Reflection cache per class | One `ReflectionClass` call per type, not per instance | — |
+| Remove `setAccessible` | Deprecated in PHP 8.1, removed in PHP 9; `PropertyAccessor` handles this | [ADR-001](docs/ADR-001-remove-setaccessible-dead-code.md) |
+| `clearCache()` on interface | Enables test isolation and dynamic class reloading | [ADR-002](docs/ADR-002-add-clearcache-to-interface.md) |
+| Wrapped exception hierarchy | Callers catch `PropertyInspectionException`, not reflection internals | [ADR-003](docs/ADR-003-correct-throws-annotation.md) |
+| Handler-returned values | Handler decides the processed value — supports chaining and transformation | — |
+
+### Specifications
+
+| Spec | Covers |
+|---|---|
+| [SPEC-001](docs/SPEC-001-property-inspection-pipeline.md) | Full pipeline: analysis → handler → mutation |
+
+---
+
+## Integration with the KaririCode Ecosystem
+
+PropertyInspector is the **reflection engine** used internally by other KaririCode components:
+
+| Component | Role |
+|---|---|
+| `kariricode/validator` | Uses `PropertyInspector` to discover `#[Rule]` attributes and dispatch to rule processors |
+| `kariricode/sanitizer` | Uses `PropertyInspector` to discover `#[Sanitize]` attributes and apply transformers |
+| `kariricode/normalizer` | Uses `PropertyInspector` for attribute-driven normalization passes |
+
+Any component that needs **declarative, attribute-based property processing** can be built on top of this pipeline.
+
+---
+
+## Project Stats
+
+| Metric | Value |
+|---|---|
+| PHP source files | 7 |
+| External runtime dependencies | 2 (contract · exception) |
+| Test suite | 40 tests · 96 assertions |
+| PHPStan level | 9 |
+| PHP version | 8.4+ |
+| ARFA compliance | 1.3 |
+| Test suites | Unit + Integration |
+| Reflection cache | Per-class, per-`AttributeAnalyzer` instance |
+
+---
+
+## Contributing
+
+```bash
+git clone https://github.com/KaririCode-Framework/kariricode-property-inspector.git
+cd kariricode-property-inspector
+composer install
+kcode init
+kcode quality  # Must pass before opening a PR
+```
+
+---
+
+## License
+
+[MIT License](LICENSE) © [Walmir Silva](mailto:community@kariricode.org)
+
+---
+
+<div align="center">
+
+Part of the **[KaririCode Framework](https://kariricode.org)** ecosystem.
+
+[kariricode.org](https://kariricode.org) · [GitHub](https://github.com/KaririCode-Framework/kariricode-property-inspector) · [Packagist](https://packagist.org/packages/kariricode/property-inspector) · [Issues](https://github.com/KaririCode-Framework/kariricode-property-inspector/issues)
+
+</div>
