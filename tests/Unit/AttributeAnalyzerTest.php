@@ -17,11 +17,9 @@ use KaririCode\PropertyInspector\Tests\Fixture\NoAttributeFixture;
 use KaririCode\PropertyInspector\Tests\Fixture\PrivatePropertiesFixture;
 use KaririCode\PropertyInspector\Tests\Fixture\UserFixture;
 use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 
 #[CoversClass(AttributeAnalyzer::class)]
-#[UsesClass(PropertyInspectionException::class)]
 final class AttributeAnalyzerTest extends TestCase
 {
     // ── analyzeObject: basic behavior ─────────────────────────────────
