@@ -97,6 +97,12 @@ jobs:
       - name: Initialize devkit
         run: kcode init
 
+      # Patch generated phpunit.xml.dist — beStrictAboutCoverageMetadata causes false
+      # "not a valid target" warnings for classes extending vendor base classes
+      - name: Patch phpunit.xml.dist
+        run: |
+          sed -i 's/beStrictAboutCoverageMetadata="true"/beStrictAboutCoverageMetadata="false"/' .kcode/phpunit.xml.dist
+
       # Runs PHPStan Level 9 then Psalm sequentially — both must pass
       - name: Run PHPStan + Psalm via kcode
         run: kcode analyse
@@ -166,6 +172,12 @@ jobs:
 
       - name: Initialize devkit
         run: kcode init
+
+      # Patch generated phpunit.xml.dist — beStrictAboutCoverageMetadata causes false
+      # "not a valid target" warnings for classes extending vendor base classes
+      - name: Patch phpunit.xml.dist
+        run: |
+          sed -i 's/beStrictAboutCoverageMetadata="true"/beStrictAboutCoverageMetadata="false"/' .kcode/phpunit.xml.dist
 
       - name: Run tests with coverage (pcov)
         run: kcode test --coverage
