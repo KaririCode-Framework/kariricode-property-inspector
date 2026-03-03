@@ -19,7 +19,6 @@ use PHPUnit\Framework\TestCase;
 
 #[CoversClass(PropertyInspector::class)]
 #[UsesClass(AttributeAnalyzer::class)]
-#[UsesClass(PropertyInspectionException::class)]
 final class PropertyInspectorTest extends TestCase
 {
     // ── inspect: basic delegation ────────────────────────────────────

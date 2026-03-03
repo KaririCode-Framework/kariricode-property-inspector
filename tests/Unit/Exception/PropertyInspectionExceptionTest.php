@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace KaririCode\PropertyInspector\Tests\Unit\Exception;
 
 use KaririCode\PropertyInspector\Exception\PropertyInspectionException;
-use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\TestCase;
 
-#[CoversClass(PropertyInspectionException::class)]
+#[CoversNothing]
 final class PropertyInspectionExceptionTest extends TestCase
 {
     public function testFailedToAnalyzeObjectReflectionWrapsReflectionException(): void
