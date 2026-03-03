@@ -15,6 +15,7 @@ final class PropertyInspector implements PropertyInspectorContract
     {
     }
 
+    #[\Override]
     public function inspect(object $object, PropertyAttributeHandler $handler): PropertyAttributeHandler
     {
         try {

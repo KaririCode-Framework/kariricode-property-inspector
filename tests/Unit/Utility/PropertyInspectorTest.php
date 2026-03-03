@@ -6,7 +6,6 @@ namespace KaririCode\PropertyInspector\Tests\Unit\Utility;
 
 use KaririCode\PropertyInspector\AttributeAnalyzer;
 use KaririCode\PropertyInspector\Contract\AttributeAnalyzer as AttributeAnalyzerContract;
-use KaririCode\PropertyInspector\Contract\PropertyAttributeHandler;
 use KaririCode\PropertyInspector\Exception\PropertyInspectionException;
 use KaririCode\PropertyInspector\Tests\Fixture\Attribute\Sanitize;
 use KaririCode\PropertyInspector\Tests\Fixture\Attribute\Validate;
@@ -14,8 +13,13 @@ use KaririCode\PropertyInspector\Tests\Fixture\NoAttributeFixture;
 use KaririCode\PropertyInspector\Tests\Fixture\SpyAttributeHandler;
 use KaririCode\PropertyInspector\Tests\Fixture\UserFixture;
 use KaririCode\PropertyInspector\Utility\PropertyInspector;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(PropertyInspector::class)]
+#[UsesClass(AttributeAnalyzer::class)]
+#[UsesClass(PropertyInspectionException::class)]
 final class PropertyInspectorTest extends TestCase
 {
     // ── inspect: basic delegation ────────────────────────────────────
@@ -76,7 +80,7 @@ final class PropertyInspectorTest extends TestCase
 
         $properties = array_map(
             static fn (array $call): string => $call['propertyName'],
-            $handler->getCalls()
+            $handler->getCalls(),
         );
         self::assertContains('name', $properties);
         self::assertContains('email', $properties);

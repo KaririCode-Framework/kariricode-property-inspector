@@ -55,7 +55,7 @@ final class SpyAttributeHandler implements PropertyAttributeHandler
 
     public function getCallCount(): int
     {
-        return count($this->calls);
+        return \count($this->calls);
     }
 
     /**
@@ -68,8 +68,8 @@ final class SpyAttributeHandler implements PropertyAttributeHandler
         return array_values(
             array_filter(
                 $this->calls,
-                static fn (array $call): bool => $call['propertyName'] === $propertyName
-            )
+                static fn (array $call): bool => $call['propertyName'] === $propertyName,
+            ),
         );
     }
 }

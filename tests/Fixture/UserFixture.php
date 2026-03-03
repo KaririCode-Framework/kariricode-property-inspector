@@ -13,14 +13,11 @@ final class UserFixture
         #[Validate(processors: ['required', 'string', 'min:3'])]
         #[Sanitize(sanitizers: ['trim'])]
         public string $name = '',
-
         #[Validate(processors: ['required', 'email'])]
         #[Sanitize(sanitizers: ['trim', 'lowercase'])]
         public string $email = '',
-
         #[Validate(processors: ['required', 'integer', 'min:18'])]
         public int $age = 0,
-
         public string $noAttribute = 'ignored',
     ) {
     }

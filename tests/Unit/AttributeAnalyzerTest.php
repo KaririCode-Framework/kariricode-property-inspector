@@ -5,16 +5,23 @@ declare(strict_types=1);
 namespace KaririCode\PropertyInspector\Tests\Unit;
 
 use KaririCode\PropertyInspector\AttributeAnalyzer;
+use KaririCode\PropertyInspector\Exception\PropertyInspectionException;
+use KaririCode\PropertyInspector\Tests\Fixture\Attribute\BrokenAttribute;
 use KaririCode\PropertyInspector\Tests\Fixture\Attribute\ProcessableAttribute;
 use KaririCode\PropertyInspector\Tests\Fixture\Attribute\Sanitize;
 use KaririCode\PropertyInspector\Tests\Fixture\Attribute\Transform;
 use KaririCode\PropertyInspector\Tests\Fixture\Attribute\Validate;
+use KaririCode\PropertyInspector\Tests\Fixture\BrokenAttributeFixture;
 use KaririCode\PropertyInspector\Tests\Fixture\MixedAttributeFixture;
 use KaririCode\PropertyInspector\Tests\Fixture\NoAttributeFixture;
 use KaririCode\PropertyInspector\Tests\Fixture\PrivatePropertiesFixture;
 use KaririCode\PropertyInspector\Tests\Fixture\UserFixture;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(AttributeAnalyzer::class)]
+#[UsesClass(PropertyInspectionException::class)]
 final class AttributeAnalyzerTest extends TestCase
 {
     // ── analyzeObject: basic behavior ─────────────────────────────────
@@ -137,7 +144,7 @@ final class AttributeAnalyzerTest extends TestCase
         // Attribute metadata should be identical (cached)
         self::assertSame(
             $result1['name']['attributes'][0]->processors,
-            $result2['name']['attributes'][0]->processors
+            $result2['name']['attributes'][0]->processors,
         );
     }
 
@@ -201,5 +208,29 @@ final class AttributeAnalyzerTest extends TestCase
 
         self::assertArrayHasKey('secret', $resultPriv);
         self::assertArrayNotHasKey('secret', $resultUser);
+    }
+
+    // ── error handling ───────────────────────────────────────────────
+
+    public function testAnalyzeObjectWrapsReflectionExceptionFromBrokenAttribute(): void
+    {
+        // BrokenAttributeFixture has a property annotated with #[BrokenAttribute],
+        // whose constructor throws ReflectionException.
+        // When analyzeObject calls cacheObjectMetadata -> newInstance(),
+        // the exception propagates up and is caught by the catch(\ReflectionException)
+        // block in analyzeObject (lines 36-37 of AttributeAnalyzer).
+        //
+        // NOTE: We use try/catch instead of expectException() to ensure PCOV
+        // instruments the catch block in AttributeAnalyzer (not just the throw).
+        $analyzer = new AttributeAnalyzer(BrokenAttribute::class);
+        $entity = new BrokenAttributeFixture();
+
+        try {
+            $analyzer->analyzeObject($entity);
+            self::fail('Expected PropertyInspectionException was not thrown');
+        } catch (PropertyInspectionException $e) {
+            self::assertStringContainsString('Failed to analyze object using reflection', $e->getMessage());
+            self::assertSame(2501, $e->getCode());
+        }
     }
 }

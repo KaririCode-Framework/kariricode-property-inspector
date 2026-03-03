@@ -7,11 +7,14 @@ namespace KaririCode\PropertyInspector\Tests\Integration;
 use KaririCode\PropertyInspector\AttributeAnalyzer;
 use KaririCode\PropertyInspector\Contract\PropertyAttributeHandler;
 use KaririCode\PropertyInspector\Contract\PropertyChangeApplier;
+use KaririCode\PropertyInspector\Exception\PropertyInspectionException;
 use KaririCode\PropertyInspector\Tests\Fixture\Attribute\Sanitize;
 use KaririCode\PropertyInspector\Tests\Fixture\Attribute\Validate;
 use KaririCode\PropertyInspector\Tests\Fixture\UserFixture;
 use KaririCode\PropertyInspector\Utility\PropertyAccessor;
 use KaririCode\PropertyInspector\Utility\PropertyInspector;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -22,6 +25,10 @@ use PHPUnit\Framework\TestCase;
  * including multi-pass inspection, handler state accumulation,
  * and round-trip property mutation via PropertyAccessor.
  */
+#[CoversClass(AttributeAnalyzer::class)]
+#[CoversClass(PropertyInspector::class)]
+#[CoversClass(PropertyAccessor::class)]
+#[UsesClass(PropertyInspectionException::class)]
 final class InspectionPipelineTest extends TestCase
 {
     // ── Full pipeline: inspect → collect → apply ─────────────────────
@@ -155,8 +162,8 @@ final class TrimLowercaseHandler implements PropertyAttributeHandler
             $sanitized = $value;
             foreach ($attribute->sanitizers as $sanitizer) {
                 $sanitized = match ($sanitizer) {
-                    'trim' => is_string($sanitized) ? trim($sanitized) : $sanitized,
-                    'lowercase' => is_string($sanitized) ? strtolower($sanitized) : $sanitized,
+                    'trim' => \is_string($sanitized) ? trim($sanitized) : $sanitized,
+                    'lowercase' => \is_string($sanitized) ? strtolower($sanitized) : $sanitized,
                     default => $sanitized,
                 };
             }
@@ -214,9 +221,9 @@ final class SimpleValidationHandler implements PropertyAttributeHandler
     {
         return match (true) {
             $rule === 'required' && ($value === '' || $value === null) => 'Field is required',
-            $rule === 'email' && is_string($value) && !str_contains($value, '@') => 'Invalid email',
-            str_starts_with($rule, 'min:') && is_int($value) => $this->validateMin($rule, $value),
-            str_starts_with($rule, 'min:') && is_string($value) => $this->validateMinLength($rule, $value),
+            $rule === 'email' && \is_string($value) && ! str_contains($value, '@') => 'Invalid email',
+            str_starts_with($rule, 'min:') && \is_int($value) => $this->validateMin($rule, $value),
+            str_starts_with($rule, 'min:') && \is_string($value) => $this->validateMinLength($rule, $value),
             default => null,
         };
     }
@@ -232,7 +239,7 @@ final class SimpleValidationHandler implements PropertyAttributeHandler
     {
         $min = (int) substr($rule, 4);
 
-        return strlen($value) < $min ? "Must be at least {$min} characters" : null;
+        return \strlen($value) < $min ? "Must be at least {$min} characters" : null;
     }
 
     public function getProcessedPropertyValues(): array

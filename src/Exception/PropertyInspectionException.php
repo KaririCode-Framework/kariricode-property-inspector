@@ -20,7 +20,7 @@ final class PropertyInspectionException extends AbstractException
             self::CODE_REFLECTION_ANALYSIS_ERROR,
             'REFLECTION_ANALYSIS_ERROR',
             "Failed to analyze object using reflection: {$e->getMessage()}",
-            $e
+            $e,
         );
     }
 
@@ -30,7 +30,7 @@ final class PropertyInspectionException extends AbstractException
             self::CODE_GENERAL_ANALYSIS_ERROR,
             'GENERAL_ANALYSIS_ERROR',
             "An error occurred during object analysis: {$e->getMessage()}",
-            $e
+            $e,
         );
     }
 
@@ -40,7 +40,7 @@ final class PropertyInspectionException extends AbstractException
             self::CODE_REFLECTION_INSPECTION_ERROR,
             'REFLECTION_INSPECTION_ERROR',
             "Failed to inspect object using reflection: {$e->getMessage()}",
-            $e
+            $e,
         );
     }
 
@@ -50,7 +50,7 @@ final class PropertyInspectionException extends AbstractException
             self::CODE_GENERAL_INSPECTION_ERROR,
             'GENERAL_INSPECTION_ERROR',
             "An exception occurred during object inspection: {$e->getMessage()}",
-            $e
+            $e,
         );
     }
 
@@ -60,7 +60,7 @@ final class PropertyInspectionException extends AbstractException
             self::CODE_CRITICAL_INSPECTION_ERROR,
             'CRITICAL_INSPECTION_ERROR',
             "A critical error occurred during object inspection: {$e->getMessage()}",
-            $e
+            $e,
         );
     }
 }

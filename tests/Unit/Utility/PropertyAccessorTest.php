@@ -7,8 +7,10 @@ namespace KaririCode\PropertyInspector\Tests\Unit\Utility;
 use KaririCode\PropertyInspector\Tests\Fixture\PrivatePropertiesFixture;
 use KaririCode\PropertyInspector\Tests\Fixture\UserFixture;
 use KaririCode\PropertyInspector\Utility\PropertyAccessor;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(PropertyAccessor::class)]
 final class PropertyAccessorTest extends TestCase
 {
     // ── getValue ─────────────────────────────────────────────────────
