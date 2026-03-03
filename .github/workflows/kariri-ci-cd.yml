@@ -7,66 +7,34 @@ on:
     branches: [main]
 
 jobs:
-  setup-and-lint:
+  quality:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php: ["8.3"]
+        php: ["8.4"]
 
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Cache Composer dependencies
-        uses: actions/cache@v3
-        with:
-          path: vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-composer-
+      - uses: actions/checkout@v4
 
       - name: Set up PHP ${{ matrix.php }}
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring, xml
-          tools: composer:v2, php-cs-fixer, phpunit
+          extensions: mbstring, xml, pcov
+          coverage: pcov
 
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-progress
+      - name: Install project dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
 
-      - name: Validate composer.json
-        run: composer validate
+      - name: Download kcode.phar
+        run: |
+          curl -fsSL https://github.com/KaririCode-Framework/kariricode-devkit/releases/latest/download/kcode.phar \
+            -o /usr/local/bin/kcode
+          chmod +x /usr/local/bin/kcode
+          kcode --version
 
-      - name: Coding Standards Check
-        run: vendor/bin/php-cs-fixer fix --dry-run --diff
+      - name: Initialize DevKit toolchain
+        run: kcode init --skip-install
 
-  unit-tests:
-    needs: setup-and-lint
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Download Composer Cache
-        uses: actions/cache@v3
-        with:
-          path: vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-composer-
-
-      - name: Set up PHP ${{ matrix.php }}
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php }}
-          extensions: mbstring, xml
-          tools: composer:v2, php-cs-fixer, phpunit
-
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-progress
-
-      - name: Run PHPUnit Tests
-        run: XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-text
-
-      - name: Security Check
-        run: vendor/bin/security-checker security:check
+      - name: Run quality pipeline
+        run: kcode quality

@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace KaririCode\PropertyInspector\Contract;
 
 /**
- * Interface PropertyChangeApplier.
- *
- * Defines the contract for classes that apply changes to an object.
+ * Applies processed attribute handler results back to the inspected object's properties.
  */
 interface PropertyChangeApplier
 {

@@ -65,3 +65,10 @@ lista_de_arquivos.txt
 lista_de_arquivos_tests.txt
 add_static_to_providers.php
 /composer.lock
+
+# DevKit (kcode.phar)
+/.kcode/
+/coverage-report-html/
+.phpunit.cache/
+.phpunit.result.cache
+.php-cs-fixer.cache
